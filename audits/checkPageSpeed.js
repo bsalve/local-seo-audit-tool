@@ -150,6 +150,7 @@ async function checkPageSpeed($, html, url) {
         strategy: 'mobile',
         // axios serialises arrays as repeated keys: category=performance&category=seo
         category: ['performance', 'seo'],
+        ...(process.env.PAGESPEED_API_KEY && { key: process.env.PAGESPEED_API_KEY }),
       },
       timeout: 30000,
     });

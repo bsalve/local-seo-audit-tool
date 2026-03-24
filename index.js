@@ -1,5 +1,16 @@
 const fs = require('fs');
 const path = require('path');
+
+// Load .env file if present (no external dependency needed)
+try {
+  const envPath = path.join(__dirname, '.env');
+  const lines = fs.readFileSync(envPath, 'utf8').split('\n');
+  for (const line of lines) {
+    const match = line.match(/^\s*([^#=\s][^=]*?)\s*=\s*(.*?)\s*$/);
+    if (match) process.env[match[1]] = match[2];
+  }
+} catch (_) { /* .env is optional */ }
+
 const { fetchPage } = require('./utils/fetcher');
 
 // ---------------------------------------------------------------------------

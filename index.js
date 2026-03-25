@@ -1,55 +1,37 @@
-const fs = require('fs');
+const fs   = require('fs');
 const path = require('path');
 
-// Load .env file if present (no external dependency needed)
+// Load .env if present (no external dependency)
 try {
-  const envPath = path.join(__dirname, '.env');
-  const lines = fs.readFileSync(envPath, 'utf8').split('\n');
-  for (const line of lines) {
-    const match = line.match(/^\s*([^#=\s][^=]*?)\s*=\s*(.*?)\s*$/);
-    if (match) process.env[match[1]] = match[2];
+  for (const line of fs.readFileSync(path.join(__dirname, '.env'), 'utf8').split('\n')) {
+    const m = line.match(/^\s*([^#=\s][^=]*?)\s*=\s*(.*?)\s*$/);
+    if (m) process.env[m[1]] = m[2];
   }
-} catch (_) { /* .env is optional */ }
+} catch (_) {}
 
-const { fetchPage } = require('./utils/fetcher');
+const { fetchPage }   = require('./utils/fetcher');
+const { generatePDF } = require('./utils/generatePDF');
 
-// ---------------------------------------------------------------------------
-// Dynamically load every audit module in /audits at startup.
-// Drop a new .js file in that folder and it is automatically included.
-// ---------------------------------------------------------------------------
+// Auto-load every .js file in /audits
 const auditsDir = path.join(__dirname, 'audits');
 const audits = fs
   .readdirSync(auditsDir)
   .filter((f) => f.endsWith('.js'))
   .map((f) => require(path.join(auditsDir, f)));
 
-// ---------------------------------------------------------------------------
-// Scoring helpers
-// ---------------------------------------------------------------------------
+// Scoring
 
-function statusToScore(status) {
-  if (status === 'pass') return 100;
-  if (status === 'warn') return 50;
+function normalizeScore(result) {
+  if (result.score !== undefined)
+    return Math.round((result.score / (result.maxScore ?? 100)) * 100);
+  if (result.status === 'pass') return 100;
+  if (result.status === 'warn') return 50;
   return 0;
 }
 
-/**
- * Normalize any audit result to a 0–100 score.
- *  - Results with a `score` field are scaled using `maxScore` (default 100).
- *  - Results with no `score` fall back to status-derived values.
- */
-function normalizeScore(result) {
-  if (result.score !== undefined) {
-    const max = result.maxScore ?? 100;
-    return Math.round((result.score / max) * 100);
-  }
-  return statusToScore(result.status);
-}
-
-function totalScore(results) {
-  if (results.length === 0) return 0;
-  const sum = results.reduce((acc, r) => acc + normalizeScore(r), 0);
-  return Math.round(sum / results.length);
+function calcTotalScore(results) {
+  if (!results.length) return 0;
+  return Math.round(results.reduce((sum, r) => sum + normalizeScore(r), 0) / results.length);
 }
 
 function letterGrade(score) {
@@ -60,9 +42,19 @@ function letterGrade(score) {
   return 'F';
 }
 
-// ---------------------------------------------------------------------------
-// Report builders
-// ---------------------------------------------------------------------------
+const GRADE_LABELS = {
+  A: 'Excellent — this site is well-optimised for local SEO.',
+  B: 'Good — a few improvements would push this site to the top tier.',
+  C: 'Average — several important local SEO signals are missing or weak.',
+  D: 'Poor — significant issues are likely hurting local search visibility.',
+  F: 'Critical — foundational local SEO elements are missing.',
+};
+
+function gradeSummary(grade, score) {
+  return `${grade} (${score}/100) — ${GRADE_LABELS[grade]}`;
+}
+
+// Output builders
 
 function buildJsonOutput(url, results, score, grade) {
   return {
@@ -84,52 +76,32 @@ function buildJsonOutput(url, results, score, grade) {
   };
 }
 
-function gradeSummary(grade, score) {
-  const labels = {
-    A: 'Excellent — this site is well-optimised for local SEO.',
-    B: 'Good — a few improvements would push this site to the top tier.',
-    C: 'Average — several important local SEO signals are missing or weak.',
-    D: 'Poor — significant issues are likely hurting local search visibility.',
-    F: 'Critical — foundational local SEO elements are missing.',
-  };
-  return `${grade} (${score}/100) — ${labels[grade]}`;
-}
-
 function printHumanReport(results, score, grade) {
-  const WIDTH = 54;
-  const line = '─'.repeat(WIDTH);
+  const line = '─'.repeat(54);
+  const err  = (s) => process.stderr.write(s);
 
-  process.stderr.write(`\n${line}\n`);
-  process.stderr.write(' LOCAL SEO AUDIT REPORT\n');
-  process.stderr.write(`${line}\n\n`);
+  err(`\n${line}\n LOCAL SEO AUDIT REPORT\n${line}\n\n`);
 
   let passed = 0, warned = 0, failed = 0;
-
   for (const r of results) {
-    const icon = r.status === 'pass' ? '✓' : r.status === 'warn' ? '⚠' : '✗';
-    const normScore = normalizeScore(r);
-    const scoreTag = r.score !== undefined ? ` [${normScore}/100]` : '';
-    process.stderr.write(`[${icon}] ${r.name}${scoreTag}\n`);
-    process.stderr.write(`    ${r.message}\n`);
-    if (r.details)         process.stderr.write(`    Details: ${r.details}\n`);
-    if (r.recommendation)  process.stderr.write(`    Recommendation: ${r.recommendation}\n`);
-    process.stderr.write('\n');
-
+    const icon     = r.status === 'pass' ? '✓' : r.status === 'warn' ? '⚠' : '✗';
+    const scoreTag = r.score !== undefined ? ` [${normalizeScore(r)}/100]` : '';
+    err(`[${icon}] ${r.name}${scoreTag}\n`);
+    err(`    ${r.message}\n`);
+    if (r.details)        err(`    Details: ${r.details}\n`);
+    if (r.recommendation) err(`    Recommendation: ${r.recommendation}\n`);
+    err('\n');
     if (r.status === 'pass') passed++;
     else if (r.status === 'warn') warned++;
     else failed++;
   }
 
-  process.stderr.write(`${line}\n`);
-  process.stderr.write(` GRADE: ${grade}   SCORE: ${score}/100\n`);
-  process.stderr.write(` ${gradeSummary(grade, score)}\n`);
-  process.stderr.write(` ${passed} passed · ${warned} warnings · ${failed} failed\n`);
-  process.stderr.write(`${line}\n\n`);
+  err(`${line}\n GRADE: ${grade}   SCORE: ${score}/100\n`);
+  err(` ${gradeSummary(grade, score)}\n`);
+  err(` ${passed} passed · ${warned} warnings · ${failed} failed\n${line}\n\n`);
 }
 
-// ---------------------------------------------------------------------------
 // Entry point
-// ---------------------------------------------------------------------------
 
 async function runAudit(url) {
   if (!url) {
@@ -141,22 +113,21 @@ async function runAudit(url) {
   const { html, $ } = await fetchPage(url);
 
   process.stderr.write(`Running ${audits.length} audit module(s) …\n`);
-  const results = (
-    await Promise.all(audits.map((audit) => audit($, html, url)))
-  ).flat();
+  const results = (await Promise.all(audits.map((a) => a($, html, url)))).flat();
 
-  const score = totalScore(results);
-  const grade = letterGrade(score);
+  const score      = calcTotalScore(results);
+  const grade      = letterGrade(score);
+  const jsonOutput = buildJsonOutput(url, results, score, grade);
 
-  // Human-readable report → stderr (safe to pipe/redirect stdout as JSON)
   printHumanReport(results, score, grade);
+  process.stdout.write(JSON.stringify(jsonOutput, null, 2) + '\n');
 
-  // Machine-readable JSON → stdout
-  process.stdout.write(JSON.stringify(buildJsonOutput(url, results, score, grade), null, 2) + '\n');
+  process.stderr.write('Generating PDF report …\n');
+  const pdfPath = await generatePDF(jsonOutput);
+  process.stderr.write(`PDF saved → ${pdfPath}\n\n`);
 }
 
-const url = process.argv[2];
-runAudit(url).catch((err) => {
+runAudit(process.argv[2]).catch((err) => {
   process.stderr.write(`Audit failed: ${err.message}\n`);
   process.exit(1);
 });

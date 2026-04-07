@@ -3,5 +3,8 @@
     "allow": [
       "Bash(node:*)"
     ]
+  },
+  "enabledPlugins": {
+    "seo-geo@opc-skills": true
   }
 }

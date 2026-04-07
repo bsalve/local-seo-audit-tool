@@ -35,6 +35,16 @@ function statusCounts(results) {
   );
 }
 
+function groupResults(results) {
+  const seo = [], aeo = [], geo = [];
+  for (const r of results) {
+    if (r.name.startsWith('[AEO]')) aeo.push({ ...r, name: r.name.replace(/^\[AEO\]\s*/, '') });
+    else if (r.name.startsWith('[GEO]')) geo.push({ ...r, name: r.name.replace(/^\[GEO\]\s*/, '') });
+    else seo.push(r);
+  }
+  return { seoResults: seo, aeoResults: aeo, geoResults: geo };
+}
+
 async function generatePDF(auditJson, options = {}) {
   const outputDir = options.outputDir ?? path.join(__dirname, '..', 'output');
   fs.mkdirSync(outputDir, { recursive: true });
@@ -52,6 +62,7 @@ async function generatePDF(auditJson, options = {}) {
     auditedAt,
     meterColor: meterColor(auditJson.totalScore),
     ...statusCounts(auditJson.results),
+    ...groupResults(auditJson.results),
   });
 
   const domain   = domainSlug(auditJson.url);

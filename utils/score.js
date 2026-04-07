@@ -1,11 +1,11 @@
 'use strict';
 
 const GRADE_LABELS = {
-  A: 'Excellent — this site is well-optimised for local SEO.',
-  B: 'Good — a few improvements would push this site to the top tier.',
-  C: 'Average — several important local SEO signals are missing or weak.',
-  D: 'Poor — significant issues are likely hurting local search visibility.',
-  F: 'Critical — foundational local SEO elements are missing.',
+  A: 'Excellent — strong SEO, AEO, and GEO signals across the board.',
+  B: 'Good — core signals are solid; targeted AEO or GEO improvements would push this higher.',
+  C: 'Average — several SEO, AEO, or GEO signals are missing or weak.',
+  D: 'Poor — significant gaps in SEO foundations and AI-readiness signals.',
+  F: 'Critical — foundational SEO elements and AI optimisation signals are missing.',
 };
 
 function normalizeScore(result) {

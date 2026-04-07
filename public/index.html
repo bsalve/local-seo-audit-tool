@@ -90,6 +90,11 @@
     .meta-label { font-size: 11px; letter-spacing: 0.15em; color: var(--muted); text-transform: uppercase; }
     .meta-label span { color: var(--accent); }
     .meta-checks { font-size: 11px; letter-spacing: 0.1em; color: var(--muted); }
+    .meta-dot { opacity: 0.4; }
+    .cat-tag { letter-spacing: 0.12em; font-weight: 700; }
+    .cat-tag.cat-seo { color: var(--muted); }
+    .cat-tag.cat-aeo { color: #7baeff; }
+    .cat-tag.cat-geo { color: #a07bff; }
 
     .display-block { padding-top: 0; }
 
@@ -381,6 +386,33 @@
     .row-score-val.pass { color: var(--pass); }
     .row-score-val.warn { color: var(--warn); }
     .row-score-val.fail { color: var(--fail); }
+
+    /* ── Category separators ── */
+    .card-cat-sep {
+      flex-shrink: 0; display: flex; align-items: center;
+      padding: 0 6px; gap: 0;
+    }
+    .card-cat-sep-inner {
+      writing-mode: vertical-lr; transform: rotate(180deg);
+      font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--border); border-left: 1px solid var(--border);
+      padding-left: 8px; height: 72px; display: flex; align-items: center;
+    }
+    .card-cat-sep-inner.cat-aeo { color: #7baeff; border-color: #2a3a5c; }
+    .card-cat-sep-inner.cat-geo { color: #b07bff; border-color: #3a2a5c; }
+
+    .detail-cat-header {
+      font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase;
+      color: var(--muted); padding: 20px 0 6px;
+      display: flex; align-items: center; gap: 10px;
+      border-top: 1px solid var(--border);
+    }
+    .detail-cat-header::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .detail-cat-header.cat-aeo { color: #7baeff; }
+    .detail-cat-header.cat-geo { color: #b07bff; }
+    .detail-cat-header .cat-full {
+      font-size: 8px; color: var(--muted); letter-spacing: 0.1em; font-style: italic; opacity: 0.6;
+    }
   </style>
 </head>
 <body>
@@ -390,7 +422,7 @@
   <section class="hero">
     <div class="meta-row">
       <div class="meta-label">LOCAL.<span>SEO</span>.AUDIT &nbsp;/&nbsp; v1.0</div>
-      <div class="meta-checks">10 CHECKS · PDF OUTPUT · STATIC HTML ONLY</div>
+      <div class="meta-checks"><span class="cat-tag cat-seo">SEO</span> <span class="meta-dot">·</span> <span class="cat-tag cat-aeo">AEO</span> <span class="meta-dot">·</span> <span class="cat-tag cat-geo">GEO</span> <span class="meta-dot">·</span> 16 CHECKS · PDF OUTPUT</div>
     </div>
 
     <div class="display-block">
@@ -436,16 +468,22 @@
 <script>
   /* ── Step cycling ── */
   const STEPS = [
-    'Resolving domain',
-    'Fetching page HTML',
-    'Checking SSL certificate',
-    'Scanning robots.txt & sitemap',
-    'Auditing meta tags',
-    'Checking H1 headings',
-    'Analyzing structured data',
-    'Checking NAP consistency',
-    'Querying PageSpeed Insights',
-    'Checking mobile friendliness',
+    '[SEO] Resolving domain',
+    '[SEO] Fetching page HTML',
+    '[SEO] Checking SSL certificate',
+    '[SEO] Scanning robots.txt & sitemap',
+    '[SEO] Auditing meta tags',
+    '[SEO] Checking H1 headings',
+    '[SEO] Analyzing structured data',
+    '[SEO] Checking NAP consistency',
+    '[SEO] Querying PageSpeed Insights',
+    '[SEO] Checking mobile friendliness',
+    '[AEO] Checking FAQ & question schema',
+    '[AEO] Checking speakable markup',
+    '[AEO] Analyzing question-based headings',
+    '[GEO] Auditing E-E-A-T signals',
+    '[GEO] Checking organization entity clarity',
+    '[GEO] Analyzing structured content',
     'Calculating score',
     'Generating PDF report',
   ];
@@ -476,7 +514,10 @@
     document.getElementById('stepList').innerHTML = STEPS.map((s, i) => {
       const cls = i < currentStep ? 'done' : i === currentStep ? 'active' : 'pending';
       const pre = i < currentStep ? '✓' : i === currentStep ? '›' : '·';
-      return `<div class="step-item ${cls}"><span class="step-dot"></span>${pre} ${s}</div>`;
+      const label = s.replace(/^\[(SEO)\]/, '<span style="color:#8892a4">[$1]</span>')
+                     .replace(/^\[(AEO)\]/, '<span style="color:#7baeff">[$1]</span>')
+                     .replace(/^\[(GEO)\]/, '<span style="color:#b07bff">[$1]</span>');
+      return `<div class="step-item ${cls}"><span class="step-dot"></span>${pre} ${label}</div>`;
     }).join('');
   }
 
@@ -552,11 +593,30 @@
     document.getElementById('errorLine').style.display = 'none';
   }
 
+  /* ── Category helpers ── */
+  function resultCategory(name) {
+    if (name.startsWith('[AEO]')) return 'aeo';
+    if (name.startsWith('[GEO]')) return 'geo';
+    return 'seo';
+  }
+  function categoryOrder(name) {
+    const c = resultCategory(name);
+    return c === 'seo' ? 0 : c === 'aeo' ? 1 : 2;
+  }
+  const CAT_LABELS = {
+    seo: { short: 'SEO', full: 'Search Engine Optimization' },
+    aeo: { short: 'AEO', full: 'Answer Engine Optimization' },
+    geo: { short: 'GEO', full: 'Generative Engine Optimization' },
+  };
+
   /* ── Render results ── */
   function renderResults(data) {
-    const pass  = data.results.filter(r => r.status === 'pass').length;
-    const warn  = data.results.filter(r => r.status === 'warn').length;
-    const fail  = data.results.filter(r => r.status === 'fail').length;
+    // Sort: SEO → AEO → GEO, stable within each group
+    const results = [...data.results].sort((a, b) => categoryOrder(a.name) - categoryOrder(b.name));
+
+    const pass  = results.filter(r => r.status === 'pass').length;
+    const warn  = results.filter(r => r.status === 'warn').length;
+    const fail  = results.filter(r => r.status === 'fail').length;
     const color = gradeColor(data.totalScore);
 
     let html = `
@@ -594,14 +654,24 @@
       <div class="cards-label" id="cardsLabel">Check Results</div>
       <div class="cards-strip" id="cardStrip">`;
 
-    for (const r of data.results) {
+    let lastCat = null;
+    for (const r of results) {
+      const cat = resultCategory(r.name);
+      if (cat !== lastCat) {
+        if (lastCat !== null) {
+          html += `<div class="card-cat-sep"><div class="card-cat-sep-inner cat-${cat}">${CAT_LABELS[cat].short}</div></div>`;
+        }
+        lastCat = cat;
+      }
       const hasScore = r.normalizedScore !== null && r.normalizedScore !== undefined;
       const scoreDisplay = hasScore ? r.normalizedScore : '—';
       const barWidth = hasScore ? r.normalizedScore : 0;
+      // Strip category prefix from card name display
+      const displayName = r.name.replace(/^\[(AEO|GEO)\]\s*/, '');
       html += `
         <div class="audit-card ${r.status}">
           <div class="card-icon">${statusIcon(r.status)}</div>
-          <div class="card-name">${esc(r.name)}</div>
+          <div class="card-name">${esc(displayName)}</div>
           <div class="card-score-val">${scoreDisplay}${hasScore ? '<span style="font-size:12px;color:var(--muted)">/100</span>' : ''}</div>
           <div class="card-bar"><div class="card-bar-fill" style="width:${barWidth}%"></div></div>
           <div class="card-msg">${esc((r.message || '').split('\n')[0])}</div>
@@ -614,8 +684,15 @@
       <div class="detail-label" id="detailLabel">Detailed Findings</div>
       <div class="result-rows" id="resultRows">`;
 
-    for (let i = 0; i < data.results.length; i++) {
-      const r = data.results[i];
+    lastCat = null;
+    for (let i = 0; i < results.length; i++) {
+      const r = results[i];
+      const cat = resultCategory(r.name);
+      if (cat !== lastCat) {
+        const catInfo = CAT_LABELS[cat];
+        html += `<div class="detail-cat-header cat-${cat}">${catInfo.short} <span class="cat-full">— ${catInfo.full}</span></div>`;
+        lastCat = cat;
+      }
       const hasScore = r.normalizedScore !== null && r.normalizedScore !== undefined;
       html += `
         <div class="result-row">

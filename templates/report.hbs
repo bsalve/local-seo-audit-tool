@@ -61,6 +61,17 @@
     }
     .doc-meta-label span { color: var(--accent); }
 
+    .doc-meta-cats {
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+    .cat-seo { color: var(--muted); }
+    .cat-aeo { color: #7baeff; }
+    .cat-geo { color: #b07bff; }
+    .cat-sep { color: var(--dim2); margin: 0 4px; }
+
     .doc-url {
       font-size: 16px;
       font-weight: 700;
@@ -186,7 +197,7 @@
     .stat-warn .stat-n { color: var(--warn); }
     .stat-fail .stat-n { color: var(--fail); }
 
-    /* ── SECTION LABEL ── */
+    /* ── SECTION / CATEGORY LABELS ── */
     .section-label {
       font-size: 9px;
       letter-spacing: 0.2em;
@@ -203,6 +214,33 @@
       height: 1px;
       background: var(--border);
     }
+
+    .cat-header {
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 20px 0 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+    }
+    .cat-header::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+    .cat-header .cat-full {
+      font-size: 8px;
+      font-style: italic;
+      letter-spacing: 0.08em;
+      opacity: 0.7;
+    }
+    .cat-header.cat-aeo { color: #7baeff; }
+    .cat-header.cat-geo { color: #b07bff; }
 
     /* ── RESULT ROWS ── */
     .result-rows { display: flex; flex-direction: column; }
@@ -297,6 +335,9 @@
   <div class="doc-header">
     <div>
       <div class="doc-meta-label">LOCAL.<span>SEO</span>.AUDIT &nbsp;·&nbsp; REPORT</div>
+      <div class="doc-meta-cats">
+        <span class="cat-seo">SEO</span><span class="cat-sep">·</span><span class="cat-aeo">AEO</span><span class="cat-sep">·</span><span class="cat-geo">GEO</span>
+      </div>
       <div class="doc-url">{{url}}</div>
     </div>
     <div class="doc-date">
@@ -337,10 +378,10 @@
     </div>
   </div>
 
-  <!-- Results -->
-  <div class="section-label">Audit Results</div>
+  <!-- SEO Results -->
+  <div class="section-label">SEO — Search Engine Optimization</div>
   <div class="result-rows">
-    {{#each results}}
+    {{#each seoResults}}
     <div class="result-row row-{{status}}">
       <div class="row-icon icon-{{status}}">
         {{#if (eq status "pass")}}✓{{else if (eq status "warn")}}△{{else}}✕{{/if}}
@@ -367,6 +408,72 @@
     </div>
     {{/each}}
   </div>
+
+  <!-- AEO Results -->
+  {{#if aeoResults.length}}
+  <div class="cat-header cat-aeo">AEO <span class="cat-full">— Answer Engine Optimization</span></div>
+  <div class="result-rows">
+    {{#each aeoResults}}
+    <div class="result-row row-{{status}}">
+      <div class="row-icon icon-{{status}}">
+        {{#if (eq status "pass")}}✓{{else if (eq status "warn")}}△{{else}}✕{{/if}}
+      </div>
+      <div>
+        <div class="row-name">{{name}}</div>
+        {{#if message}}<div class="row-msg">{{message}}</div>{{/if}}
+        {{#if details}}<div class="row-details">{{details}}</div>{{/if}}
+        {{#if recommendation}}
+        <div class="row-rec">
+          <div class="row-rec-label">Recommendation</div>
+          {{recommendation}}
+        </div>
+        {{/if}}
+        {{#if (isDefined normalizedScore)}}
+        <div class="row-bar">
+          <div class="row-bar-fill bar-{{status}}" style="width:{{normalizedScore}}%"></div>
+        </div>
+        {{/if}}
+      </div>
+      <div class="row-score rscore-{{status}}">
+        {{#if (isDefined normalizedScore)}}{{normalizedScore}}/100{{/if}}
+      </div>
+    </div>
+    {{/each}}
+  </div>
+  {{/if}}
+
+  <!-- GEO Results -->
+  {{#if geoResults.length}}
+  <div class="cat-header cat-geo">GEO <span class="cat-full">— Generative Engine Optimization</span></div>
+  <div class="result-rows">
+    {{#each geoResults}}
+    <div class="result-row row-{{status}}">
+      <div class="row-icon icon-{{status}}">
+        {{#if (eq status "pass")}}✓{{else if (eq status "warn")}}△{{else}}✕{{/if}}
+      </div>
+      <div>
+        <div class="row-name">{{name}}</div>
+        {{#if message}}<div class="row-msg">{{message}}</div>{{/if}}
+        {{#if details}}<div class="row-details">{{details}}</div>{{/if}}
+        {{#if recommendation}}
+        <div class="row-rec">
+          <div class="row-rec-label">Recommendation</div>
+          {{recommendation}}
+        </div>
+        {{/if}}
+        {{#if (isDefined normalizedScore)}}
+        <div class="row-bar">
+          <div class="row-bar-fill bar-{{status}}" style="width:{{normalizedScore}}%"></div>
+        </div>
+        {{/if}}
+      </div>
+      <div class="row-score rscore-{{status}}">
+        {{#if (isDefined normalizedScore)}}{{normalizedScore}}/100{{/if}}
+      </div>
+    </div>
+    {{/each}}
+  </div>
+  {{/if}}
 
 </div>
 </body>

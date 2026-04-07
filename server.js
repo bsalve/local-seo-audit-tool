@@ -4,6 +4,14 @@ const fs      = require('fs');
 const path    = require('path');
 const express = require('express');
 
+// Load .env if present (mirrors index.js behaviour)
+try {
+  for (const line of fs.readFileSync(path.join(__dirname, '.env'), 'utf8').split('\n')) {
+    const m = line.match(/^\s*([^#=\s][^=]*?)\s*=\s*(.*?)\s*$/);
+    if (m) process.env[m[1]] = m[2];
+  }
+} catch (_) {}
+
 const { fetchPage }   = require('./utils/fetcher');
 const { generatePDF } = require('./utils/generatePDF');
 const { calcTotalScore, letterGrade, buildJsonOutput } = require('./utils/score');

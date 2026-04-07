@@ -162,6 +162,8 @@ Previously broke this by applying a blue accent change to pass-colored score rea
 
 4. **Category text unreadable on dark background** — AEO/GEO category header colors `#4a5ea8` / `#6a4a98` were too dark against `#0b0c0e`. Use `#7baeff` (AEO) and `#b07bff` (GEO) — these are the confirmed readable values.
 
+5. **Result row bar colour used `gradeColor()` instead of status colour** — The `.row-bar-fill` inline `background` was set via `gradeColor(r.normalizedScore)`, which maps 80–89 to a hardcoded blue (`#00ccff`). AEO/GEO checks scoring 80 showed a blue bar instead of green. Fix: use status colour directly — `r.status === 'pass' ? 'var(--pass)' : r.status === 'warn' ? 'var(--warn)' : 'var(--fail)'`. `gradeColor()` is only appropriate for the overall score meter, not individual result bars.
+
 ## Server Notes
 
 - `open` package (v9+) is ESM-only — use `import('open').then(m => m.default(url))`, not `require('open')`

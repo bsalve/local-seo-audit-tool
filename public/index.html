@@ -704,7 +704,7 @@
             ${r.recommendation ? `
               <button class="rec-btn" onclick="toggleRec(${i})">+ recommendation</button>
               <div class="row-rec" id="rec${i}">${esc(r.recommendation)}</div>` : ''}
-            ${hasScore ? `<div class="row-bar"><div class="row-bar-fill" style="width:${r.normalizedScore}%;background:${gradeColor(r.normalizedScore)}"></div></div>` : ''}
+            ${hasScore ? `<div class="row-bar"><div class="row-bar-fill" style="width:${r.normalizedScore}%;background:${r.status === 'pass' ? 'var(--pass)' : r.status === 'warn' ? 'var(--warn)' : 'var(--fail)'}"></div></div>` : ''}
           </div>
           <div class="row-score-val ${r.status}">${hasScore ? r.normalizedScore + '/100' : ''}</div>
         </div>`;

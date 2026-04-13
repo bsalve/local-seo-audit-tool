@@ -54,10 +54,11 @@ async function runAudit(url) {
   }
 
   process.stderr.write(`\nFetching ${url} …\n`);
-  const { html, $ } = await fetchPage(url);
+  const { html, $, headers, finalUrl, responseTimeMs } = await fetchPage(url);
+  const meta = { headers, finalUrl, responseTimeMs };
 
   process.stderr.write(`Running ${audits.length} audit module(s) …\n`);
-  const results = (await Promise.all(audits.map((a) => a($, html, url)))).flat();
+  const results = (await Promise.all(audits.map((a) => a($, html, url, meta)))).flat();
 
   const score      = calcTotalScore(results);
   const grade      = letterGrade(score);

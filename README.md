@@ -28,7 +28,7 @@ npm install
 npm start
 ```
 
-Opens `http://localhost:3000` in your browser automatically. Enter any URL, hit **Run**, and the tool works through all 36 checks in real time with a categorized progress tracker. When the audit finishes:
+Opens `http://localhost:3000` in your browser automatically. Enter any URL, hit **Run**, and the tool works through all 58 checks in real time with a categorized progress tracker. When the audit finishes:
 
 - A letter grade and animated score counter are displayed
 - Per-category scores (Technical / Content / AEO / GEO) appear as mini score cards below the overall grade
@@ -103,7 +103,7 @@ The `/output` folder is gitignored.
 | 60–69  | D     | Poor — significant gaps in SEO foundations and AI-readiness signals |
 | 0–59   | F     | Critical — foundational SEO elements and AI optimisation signals are missing |
 
-Total score is the arithmetic mean of all 36 individual normalized scores (each scaled 0–100). The report also shows per-category scores (Technical / Content / AEO / GEO) with individual letter grades.
+Total score is the arithmetic mean of all 58 individual normalized scores (each scaled 0–100). The report also shows per-category scores (Technical / Content / AEO / GEO) with individual letter grades.
 
 ---
 
@@ -111,13 +111,14 @@ Total score is the arithmetic mean of all 36 individual normalized scores (each 
 
 All modules live in `/audits` and are auto-discovered — adding a new file is all that's needed.
 
-### Technical — Site Health & Infrastructure
+### Technical — Site Health & Infrastructure (22 checks)
 
 | File | Check | Score |
 |---|---|---|
 | `checkSSL.js` | HTTPS active, certificate valid, days until expiry | 0–100 |
 | `checkPageSpeed.js` | Google PageSpeed Insights performance score | 0–100 |
 | `checkPageSpeed.js` *(2nd result)* | Mobile friendliness via Lighthouse SEO audits | 0–100 |
+| `checkPageSpeed.js` *(3rd result)* | Core Web Vitals — LCP, TBT, CLS thresholds | 0–100 |
 | `checkCrawlability.js` | `/robots.txt` and `/sitemap.xml` exist and are valid | 0–100 |
 | `checkCanonical.js` | `<link rel="canonical">` present, non-empty, single tag | pass/warn/fail |
 | `checkMetaRobots.js` | Detects accidental noindex / nofollow / none directives | pass/warn/fail |
@@ -126,8 +127,18 @@ All modules live in `/audits` and are auto-discovered — adding a new file is a
 | `technicalBusinessHours.js` | LocalBusiness openingHoursSpecification — completeness scored | 0–100 |
 | `technicalAggregateRating.js` | AggregateRating schema with ratingValue + ratingCount | 0–100 |
 | `technicalGeoCoordinates.js` | GeoCoordinates (latitude + longitude) in LocalBusiness schema | 0–100 |
+| `technicalHreflang.js` | `<link rel="alternate" hreflang>` tags — presence, x-default, malformed | 0–100 |
+| `technicalBrokenLinks.js` | HEADs up to 20 internal links for 4xx/5xx responses | 0–100 |
+| `technicalSecurityHeaders.js` | HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy | 0–100 |
+| `technicalCompression.js` | gzip / Brotli / zstd via Content-Encoding response header | pass/fail |
+| `technicalResponseTime.js` | TTFB — Good <800ms, Needs Improvement <1800ms, Poor ≥1800ms | 0–100 |
+| `technicalRedirectChain.js` | Follows redirect chain — scored by hop count and redirect type | 0–100 |
+| `technicalMixedContent.js` | HTTP assets (img/script/iframe/link) on HTTPS pages | 0–100 |
+| `technicalFavicon.js` | `<link rel="icon">` in DOM or `/favicon.ico` reachable | 0–100 |
+| `technicalImageDimensions.js` | `<img>` tags missing width+height attributes (CLS risk) | 0–100 |
+| `technicalBreadcrumbSchema.js` | BreadcrumbList JSON-LD with itemListElement entries | 0–100 |
 
-### Content — Marketing & On-Page Signals
+### Content — Marketing & On-Page Signals (16 checks)
 
 | File | Check | Score |
 |---|---|---|
@@ -142,8 +153,13 @@ All modules live in `/audits` and are auto-discovered — adding a new file is a
 | `titleTag.js` | Title tag presence and length | pass/warn/fail |
 | `metaDescription.js` | Meta description presence and length | pass/warn/fail |
 | `headings.js` | Exactly one H1 tag present | pass/warn/fail |
+| `contentReadability.js` | Flesch-Kincaid Reading Ease — scored by readability band | 0–100 |
+| `contentFreshness.js` | Publish/update date via meta, JSON-LD, `<time>`, or text — scored by age | 0–100 |
+| `contentOutboundLinks.js` | External links and authority domain links (.gov/.edu/Wikipedia etc.) | 0–100 |
+| `contentCallToAction.js` | CTA buttons/links/tel/mailto — scored by type count | 0–100 |
+| `contentImageOptimization.js` | WebP/AVIF usage, `<figcaption>` presence, absence of GIFs | 0–100 |
 
-### AEO — Answer Engine Optimization
+### AEO — Answer Engine Optimization (9 checks)
 
 Checks that optimize for featured snippets, People Also Ask, and voice assistant responses.
 
@@ -154,8 +170,12 @@ Checks that optimize for featured snippets, People Also Ask, and voice assistant
 | `aeoSpeakable.js` | Speakable schema with CSS selectors that resolve in the DOM | 0–100 |
 | `aeoVideoSchema.js` | VideoObject schema — name, description, thumbnailUrl, uploadDate | 0–100 |
 | `aeoHowToSchema.js` | HowTo schema — step count and quality (name + text per step) | 0–100 |
+| `aeoFeaturedSnippetFormat.js` | Opening paragraph length vs 40–60 word featured snippet ideal | 0–100 |
+| `aeoArticleSchema.js` | Article/BlogPosting/NewsArticle JSON-LD — headline, author, datePublished, publisher, image | 0–100 |
+| `aeoDefinitionContent.js` | `<dl>/<dt>/<dd>` definition lists and `<dfn>` elements | 0–100 |
+| `aeoConciseAnswers.js` | Paragraphs in the 20–80 word snippet-ready range | 0–100 |
 
-### GEO — Generative Engine Optimization
+### GEO — Generative Engine Optimization (11 checks)
 
 Checks that optimize for AI-generated answers in Gemini, ChatGPT, Perplexity, and similar.
 
@@ -166,16 +186,23 @@ Checks that optimize for AI-generated answers in Gemini, ChatGPT, Perplexity, an
 | `geoStructuredContent.js` | AI-parseable content: data tables, ordered lists, definition lists, H2+H3 hierarchy | 0–100 |
 | `geoPrivacyTrust.js` | Privacy policy link, terms of service link, cookie/GDPR notice | 0–100 |
 | `geoGoogleBusinessProfile.js` | Google Business Profile URL in sameAs schema or as visible page link | 0–100 |
+| `geoCitations.js` | Citation style signals: `<cite>`, attributed blockquotes, references heading, numbered refs | 0–100 |
+| `geoServiceSchema.js` | Service/Product JSON-LD — name, description, provider, areaServed/offers | 0–100 |
+| `geoAuthorSchema.js` | Person JSON-LD — name, jobTitle, sameAs (LinkedIn etc.), image/url | 0–100 |
+| `geoReviewContent.js` | Visible testimonial signals: blockquotes, review classes, star patterns, attributed quotes | 0–100 |
+| `geoServiceAreaContent.js` | areaServed in schema + geographic text mentions (state names, location phrases) | 0–100 |
+| `geoMultiModal.js` | Embedded video (YouTube/Vimeo/etc. or `<video>`) and `<audio>` element | 0–100 |
 
 ---
 
 ## Adding a New Audit
 
 1. Create `/audits/yourCheck.js`
-2. Export a function with the signature `($, html, url)` returning a result object or array:
+2. Export a function with the signature `($, html, url, meta)` returning a result object or array:
 
 ```js
-module.exports = function myCheck($, html, url) {
+// meta = { headers, finalUrl, responseTimeMs }
+module.exports = function myCheck($, html, url, meta) {
   return {
     name: '[Technical] My Check', // prefix: [Technical], [Content], [AEO], or [GEO]
     status: 'pass',             // 'pass' | 'warn' | 'fail'
@@ -214,28 +241,69 @@ PAGESPEED_API_KEY=your_key_here
 local-seo-audit-tool/
 ├── index.js              # CLI entry point
 ├── server.js             # Express web server (port 3000)
-├── audits/               # Auto-discovered audit modules
+├── audits/               # Auto-discovered audit modules (58 checks total)
+│   ├── checkSSL.js
+│   ├── checkPageSpeed.js         # Returns 3 results: perf + mobile + Core Web Vitals
 │   ├── checkCrawlability.js
+│   ├── checkCanonical.js
+│   ├── checkMetaRobots.js
+│   ├── contentInternalLinks.js
+│   ├── schema.js
+│   ├── technicalBusinessHours.js
+│   ├── technicalAggregateRating.js
+│   ├── technicalGeoCoordinates.js
+│   ├── technicalHreflang.js
+│   ├── technicalBrokenLinks.js
+│   ├── technicalSecurityHeaders.js
+│   ├── technicalCompression.js
+│   ├── technicalResponseTime.js
+│   ├── technicalRedirectChain.js
+│   ├── technicalMixedContent.js
+│   ├── technicalFavicon.js
+│   ├── technicalImageDimensions.js
+│   ├── technicalBreadcrumbSchema.js
 │   ├── checkMetaTags.js
 │   ├── checkNAP.js
-│   ├── checkPageSpeed.js
-│   ├── checkSSL.js
-│   ├── headings.js
-│   ├── metaDescription.js
-│   ├── schema.js
+│   ├── checkOpenGraph.js
+│   ├── checkImageAlt.js
+│   ├── contentWordCount.js
+│   ├── contentHeadingHierarchy.js
+│   ├── contentBrandConsistency.js
+│   ├── contentSocialLinks.js
 │   ├── titleTag.js
-│   ├── aeoFaqSchema.js       # [AEO] FAQ / Q&A Schema
-│   ├── aeoQuestionHeadings.js # [AEO] Question-Based Headings
-│   ├── aeoSpeakable.js       # [AEO] Speakable Schema
-│   ├── geoEeat.js            # [GEO] E-E-A-T Signals
-│   ├── geoEntityClarity.js   # [GEO] Organization Entity Clarity
-│   └── geoStructuredContent.js # [GEO] Structured Content for AI
+│   ├── metaDescription.js
+│   ├── headings.js
+│   ├── contentReadability.js
+│   ├── contentFreshness.js
+│   ├── contentOutboundLinks.js
+│   ├── contentCallToAction.js
+│   ├── contentImageOptimization.js
+│   ├── aeoFaqSchema.js
+│   ├── aeoQuestionHeadings.js
+│   ├── aeoSpeakable.js
+│   ├── aeoVideoSchema.js
+│   ├── aeoHowToSchema.js
+│   ├── aeoFeaturedSnippetFormat.js
+│   ├── aeoArticleSchema.js
+│   ├── aeoDefinitionContent.js
+│   ├── aeoConciseAnswers.js
+│   ├── geoEeat.js
+│   ├── geoEntityClarity.js
+│   ├── geoStructuredContent.js
+│   ├── geoPrivacyTrust.js
+│   ├── geoGoogleBusinessProfile.js
+│   ├── geoCitations.js
+│   ├── geoServiceSchema.js
+│   ├── geoAuthorSchema.js
+│   ├── geoReviewContent.js
+│   ├── geoServiceAreaContent.js
+│   └── geoMultiModal.js
 ├── public/
 │   └── index.html        # Single-page web UI
 ├── templates/
 │   └── report.hbs        # Handlebars template for PDF output
 ├── utils/
-│   ├── fetcher.js        # axios + cheerio page fetcher
+│   ├── fetcher.js        # axios + cheerio page fetcher (returns headers, finalUrl, responseTimeMs)
 │   ├── generatePDF.js    # Puppeteer PDF renderer
 │   └── score.js          # Shared scoring and grading logic
 └── output/               # Generated PDFs (gitignored)

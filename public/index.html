@@ -453,7 +453,7 @@
   <section class="hero">
     <div class="meta-row">
       <div class="meta-label">LOCAL.<span>SEO</span>.AUDIT &nbsp;/&nbsp; v1.0</div>
-      <div class="meta-checks"><span class="cat-tag cat-technical">Technical</span> <span class="meta-dot">·</span> <span class="cat-tag cat-content">Content</span> <span class="meta-dot">·</span> <span class="cat-tag cat-aeo">AEO</span> <span class="meta-dot">·</span> <span class="cat-tag cat-geo">GEO</span> <span class="meta-dot">·</span> 36 CHECKS · PDF OUTPUT</div>
+      <div class="meta-checks"><span class="cat-tag cat-technical">Technical</span> <span class="meta-dot">·</span> <span class="cat-tag cat-content">Content</span> <span class="meta-dot">·</span> <span class="cat-tag cat-aeo">AEO</span> <span class="meta-dot">·</span> <span class="cat-tag cat-geo">GEO</span> <span class="meta-dot">·</span> <span id="checkCount">39</span> CHECKS · PDF OUTPUT</div>
     </div>
 
     <div class="display-block">
@@ -501,8 +501,8 @@
 <script>
   /* ── Step cycling ── */
   const STEPS = [
-    '[Technical] Resolving domain',
-    '[Technical] Fetching page HTML',
+    'Resolving domain',
+    'Fetching page HTML',
     '[Technical] Checking SSL certificate',
     '[Technical] Scanning robots.txt & sitemap',
     '[Technical] Checking canonical URL',
@@ -514,6 +514,17 @@
     '[Technical] Checking geo coordinates',
     '[Technical] Querying PageSpeed Insights',
     '[Technical] Checking mobile friendliness',
+    '[Technical] Checking Core Web Vitals',
+    '[Technical] Checking hreflang / i18n tags',
+    '[Technical] Checking for broken internal links',
+    '[Technical] Checking for redirect chains',
+    '[Technical] Checking for mixed content',
+    '[Technical] Checking security headers',
+    '[Technical] Checking compression',
+    '[Technical] Checking favicon',
+    '[Technical] Checking image dimensions',
+    '[Technical] Checking breadcrumb schema',
+    '[Technical] Measuring response time',
     '[Content] Auditing meta tags',
     '[Content] Checking title tag',
     '[Content] Checking meta description',
@@ -525,19 +536,36 @@
     '[Content] Checking brand consistency',
     '[Content] Checking NAP consistency',
     '[Content] Checking social media links',
+    '[Content] Checking readability score',
+    '[Content] Checking content freshness',
+    '[Content] Checking outbound links',
+    '[Content] Checking calls to action',
+    '[Content] Checking image optimization',
     '[AEO] Checking FAQ & question schema',
     '[AEO] Checking speakable markup',
     '[AEO] Analyzing question-based headings',
     '[AEO] Checking video schema',
     '[AEO] Checking how-to schema',
+    '[AEO] Checking featured snippet format',
+    '[AEO] Checking article schema',
+    '[AEO] Checking definition content',
+    '[AEO] Checking concise answer paragraphs',
     '[GEO] Auditing E-E-A-T signals',
     '[GEO] Checking organization entity clarity',
     '[GEO] Analyzing structured content',
     '[GEO] Checking privacy & trust signals',
     '[GEO] Checking Google Business Profile link',
+    '[GEO] Checking source citations',
+    '[GEO] Checking service / product schema',
+    '[GEO] Checking author schema',
+    '[GEO] Checking review content',
+    '[GEO] Checking service area content',
+    '[GEO] Checking multi-modal content',
     'Calculating score',
     'Generating PDF report',
   ];
+  document.getElementById('checkCount').textContent = STEPS.filter(s => s.startsWith('[')).length;
+
   let stepInterval = null, currentStep = 0;
 
   function updateProgress() {

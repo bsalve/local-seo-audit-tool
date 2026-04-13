@@ -50,8 +50,9 @@ app.post('/audit', async (req, res) => {
   if (!url) return res.status(400).json({ error: 'url is required' });
 
   try {
-    const { html, $ } = await fetchPage(url);
-    const results     = (await Promise.all(audits.map((a) => a($, html, url)))).flat();
+    const { html, $, headers, finalUrl, responseTimeMs } = await fetchPage(url);
+    const meta = { headers, finalUrl, responseTimeMs };
+    const results     = (await Promise.all(audits.map((a) => a($, html, url, meta)))).flat();
     const score       = calcTotalScore(results);
     const grade       = letterGrade(score);
     const jsonOutput  = buildJsonOutput(url, results, score, grade);

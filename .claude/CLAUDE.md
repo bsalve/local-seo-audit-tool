@@ -33,11 +33,11 @@ output/           # Generated PDFs (gitignored)
 
 ## Audit Modules
 
-### Technical (11 checks) — name prefixed `[Technical]`
+### Technical (22 checks) — name prefixed `[Technical]`
 | File | What it checks |
 |---|---|
 | `checkSSL.js` | HTTPS + cert validity + expiry |
-| `checkPageSpeed.js` | PageSpeed Insights (returns 2 results: perf + mobile) |
+| `checkPageSpeed.js` | PageSpeed Insights (returns 3 results: perf + mobile + Core Web Vitals) |
 | `checkCrawlability.js` | robots.txt + sitemap.xml |
 | `checkCanonical.js` | `<link rel="canonical">` presence and validity |
 | `checkMetaRobots.js` | Detects noindex/nofollow/none meta robots directives |
@@ -46,8 +46,20 @@ output/           # Generated PDFs (gitignored)
 | `technicalBusinessHours.js` | openingHoursSpecification in LocalBusiness — scored 0/25/60/80/100 |
 | `technicalAggregateRating.js` | AggregateRating schema with ratingValue + ratingCount — scored 0/60/100 |
 | `technicalGeoCoordinates.js` | GeoCoordinates (lat/long) in LocalBusiness — scored 0/50/100 |
+| `technicalHreflang.js` | `<link rel="alternate" hreflang>` tags — presence, x-default, malformed — scored 0/20/50/70/100 |
+| `technicalBrokenLinks.js` | HEADs up to 20 internal links for 4xx/5xx — scored 0/20/60/100 |
+| `technicalSecurityHeaders.js` | HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy (25 pts each) |
+| `technicalCompression.js` | gzip/Brotli/zstd via Content-Encoding header — pass/fail |
+| `technicalResponseTime.js` | TTFB in ms — Good <800ms, Needs Improvement <1800ms, Poor ≥1800ms |
+| `technicalRedirectChain.js` | Follows redirect chain manually — scored by hop count and redirect type |
+| `technicalMixedContent.js` | HTTP assets on HTTPS pages (img/script/iframe/link) — scored 0/60/100 |
+| `technicalFavicon.js` | `<link rel="icon">` in DOM or /favicon.ico reachable — scored 0/70/100 |
+| `technicalImageDimensions.js` | `<img>` missing width+height (CLS risk) — scored by % missing |
+| `technicalBreadcrumbSchema.js` | BreadcrumbList JSON-LD with itemListElement — scored 0/50/60/100 |
 
-### Content (11 checks) — name prefixed `[Content]`
+**Note:** `utils/fetcher.js` returns `{ html, $, headers, finalUrl, responseTimeMs }`. Audits receive these as a 4th `meta` argument: `($, html, url, meta)`. Existing audits that don't use `meta` are unaffected.
+
+### Content (16 checks) — name prefixed `[Content]`
 | File | What it checks |
 |---|---|
 | `checkMetaTags.js` | Title + meta description length |
@@ -61,8 +73,13 @@ output/           # Generated PDFs (gitignored)
 | `titleTag.js` | Title tag presence/length (no score field) |
 | `metaDescription.js` | Meta description presence/length (no score field) |
 | `headings.js` | Exactly one H1 (no score field) |
+| `contentReadability.js` | Flesch-Kincaid Reading Ease — scored 0/60/100 by FRE band |
+| `contentFreshness.js` | Publish/update date via meta, JSON-LD, `<time>`, or text — scored by age |
+| `contentOutboundLinks.js` | External links + authority domain links (.gov/.edu/Wikipedia etc.) |
+| `contentCallToAction.js` | CTA buttons/links/tel/mailto — scored 0/60/70/100 by type count |
+| `contentImageOptimization.js` | WebP/AVIF usage(50) + figcaption(30) + no GIFs(20) — scored 0–100 |
 
-### AEO (5 checks) — name prefixed `[AEO]`
+### AEO (9 checks) — name prefixed `[AEO]`
 | File | What it checks |
 |---|---|
 | `aeoFaqSchema.js` | FAQPage/QAPage/HowTo JSON-LD — scored on entity count (0/40/70/100) |
@@ -70,8 +87,12 @@ output/           # Generated PDFs (gitignored)
 | `aeoSpeakable.js` | Speakable JSON-LD with resolving CSS selectors — scored 0/50/60/100 |
 | `aeoVideoSchema.js` | VideoObject JSON-LD — key fields: name, description, thumbnailUrl, uploadDate — scored 0/40/70/100 |
 | `aeoHowToSchema.js` | HowTo JSON-LD — step count + quality (name+text per step) — scored 0/30/60/100 |
+| `aeoFeaturedSnippetFormat.js` | Opening paragraph word count vs 40–60 word ideal — scored 0/40/50/70/100 |
+| `aeoArticleSchema.js` | Article/BlogPosting/NewsArticle JSON-LD — headline(25)+author(25)+datePublished(20)+publisher(20)+image(10) |
+| `aeoDefinitionContent.js` | `<dl>/<dt>/<dd>` definition lists + `<dfn>` elements — scored 0/50/70/100 |
+| `aeoConciseAnswers.js` | Paragraphs in 20–80 word snippet-ready range — scored 0/40/70/100 |
 
-### GEO (5 checks) — name prefixed `[GEO]`
+### GEO (11 checks) — name prefixed `[GEO]`
 | File | What it checks |
 |---|---|
 | `geoEeat.js` | Author byline + date + about link + contact link (25 pts each) |
@@ -79,12 +100,20 @@ output/           # Generated PDFs (gitignored)
 | `geoStructuredContent.js` | Data tables(30) + ordered lists(35) + dl(20) + H2+H3(15) |
 | `geoPrivacyTrust.js` | Privacy policy link(40) + terms link(35) + cookie/GDPR notice(25) — scored 0–100 |
 | `geoGoogleBusinessProfile.js` | GBP URL in sameAs schema(60/warn) or visible page link(100/pass) |
+| `geoCitations.js` | Citation style signals: `<cite>`, attributed `<blockquote>`, references heading, numbered refs |
+| `geoServiceSchema.js` | Service/Product JSON-LD: name(30)+description(30)+provider(20)+areaServed/offers(20) |
+| `geoAuthorSchema.js` | Person JSON-LD: name(30)+jobTitle(25)+sameAs(25)+image/url(20) |
+| `geoReviewContent.js` | Visible testimonial signals: blockquote, review classes, star patterns, attributed quotes |
+| `geoServiceAreaContent.js` | areaServed in schema + geographic text mentions (state names, location phrases) |
+| `geoMultiModal.js` | Embedded video (YouTube/Vimeo/etc. or `<video>`) + `<audio>` element |
 
 ## Audit Module Interface
 
-Each audit exports a **synchronous or async** function `($, html, url)` returning:
+Each audit exports a **synchronous or async** function `($, html, url, meta)` returning:
 `{ name, status, score?, maxScore?, message, details?, recommendation? }`
 May return an array. Auto-discovered — no changes to `index.js` needed.
+
+`meta` is `{ headers, finalUrl, responseTimeMs }` — HTTP response headers, the final URL after redirects, and TTFB in ms. Existing audits that don't use `meta` are unaffected.
 
 **Naming convention:** Prefix `name` with `[Technical]`, `[Content]`, `[AEO]`, or `[GEO]` to auto-group in UI and PDF. Unprefixed → Technical section.
 
@@ -93,7 +122,7 @@ May return an array. Auto-discovered — no changes to `index.js` needed.
 Scoring logic is shared between `index.js` and `server.js` via `utils/score.js`:
 - If `score` present: `Math.round((score / (maxScore ?? 100)) * 100)`
 - If no `score`: pass=100, warn=50, fail=0
-- `totalScore` = arithmetic mean of all normalized scores (all 36 checks)
+- `totalScore` = arithmetic mean of all normalized scores (all 58 checks)
 - Grades: 90→A, 80→B, 70→C, 60→D, <60→F
 - Grade labels reference SEO, AEO, and GEO signals (not just SEO)
 
@@ -137,7 +166,7 @@ Font: Space Mono (Google Fonts). The `run` button uses `--accent` background on 
 
 During an audit, the UI shows a single status text line (`> [Technical] Checking SSL certificate...`) and a slim 3px progress bar below it — **no step list**. The step list was removed when it grew too long (replaced with the progress bar in a session where there were 36 steps).
 
-The `STEPS` array in `index.html` has 36 entries: 11 `[Technical]`, 11 `[Content]`, 5 `[AEO]`, 5 `[GEO]`, + "Calculating score" and "Generating PDF report". The timer interval is dynamic: `Math.max(500, Math.round(20000 / STEPS.length))` ms — self-adjusts as checks are added, no manual tuning needed.
+The `STEPS` array in `index.html` has 63 entries: 22 `[Technical]`, 16 `[Content]`, 9 `[AEO]`, 11 `[GEO]`, + "Resolving domain", "Fetching page HTML", "Calculating score", and "Generating PDF report" (not prefixed with `[` so they don't count as checks). The displayed check count is `STEPS.filter(s => s.startsWith('[')).length` = 58. The timer interval is dynamic: `Math.max(500, Math.round(20000 / STEPS.length))` ms — self-adjusts as checks are added, no manual tuning needed.
 
 When the server responds, the bar is immediately set to 100% and status text to "Done." with a 600ms pause before results render. Progress bar CSS: `#progressTrack` (3px, `var(--border)` bg) / `#progressFill` (`var(--accent)`, `transition: width 0.85s ease`).
 
@@ -212,17 +241,6 @@ Previously broke this by applying a blue accent change to pass-colored score rea
 - `utils/reporter.js` is legacy and unused — kept for compatibility
 - PSI free tier: ~400 req/day/IP. Set `PAGESPEED_API_KEY` in `.env` to avoid 429s
 - JS-rendered SPAs will score poorly — static HTML only
-
-## Feature Backlog
-
-Checks planned for future batches. Update this list as batches are completed.
-
-### Future Ideas (not yet scheduled)
-- Hreflang / i18n tags — `<link rel="alternate" hreflang>` detection (`[Technical]`)
-- Core Web Vitals — LCP, CLS, FID via PSI API extension (`[Technical]`)
-- Broken link detection — crawl internal links for 4xx responses (`[Technical]`)
-
----
 
 ## Global Rules (from ~/.claude/CLAUDE.md)
 

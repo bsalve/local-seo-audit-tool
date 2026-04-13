@@ -2,6 +2,14 @@ const axios = require('axios');
 
 const AUDIT_NAME = '[Technical] Page Speed';
 const MOBILE_AUDIT_NAME = '[Technical] Mobile Friendliness';
+const CWV_AUDIT_NAME = '[Technical] Core Web Vitals';
+
+// Google's "Good" thresholds for Core Web Vitals
+const CWV_THRESHOLDS = {
+  lcp: 2500,   // ms — Largest Contentful Paint
+  tbt: 200,    // ms — Total Blocking Time (Lighthouse proxy for INP/FID)
+  cls: 0.1,    // unitless — Cumulative Layout Shift
+};
 const PSI_API = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed';
 
 // Thresholds match Google's own "Good / Needs Improvement / Poor" bands
@@ -173,6 +181,7 @@ async function checkPageSpeed($, html, url) {
     return [
       { name: AUDIT_NAME, ...errorResult },
       { name: MOBILE_AUDIT_NAME, ...errorResult },
+      { name: CWV_AUDIT_NAME, ...errorResult },
     ];
   }
 
@@ -192,6 +201,7 @@ async function checkPageSpeed($, html, url) {
     return [
       { name: AUDIT_NAME, ...errorResult },
       { name: MOBILE_AUDIT_NAME, ...errorResult },
+      { name: CWV_AUDIT_NAME, ...errorResult },
     ];
   }
 
@@ -215,7 +225,57 @@ async function checkPageSpeed($, html, url) {
   // --- Mobile Friendliness result ---
   const mobileResult = buildMobileFriendlinessResult(audits);
 
-  return [pageSpeedResult, mobileResult];
+  // --- Core Web Vitals result ---
+  const lcpMs = audits['largest-contentful-paint']?.numericValue ?? null;
+  const tbtMs = audits['total-blocking-time']?.numericValue ?? null;
+  const clsVal = audits['cumulative-layout-shift']?.numericValue ?? null;
+
+  let cwvResult;
+  if (lcpMs === null && tbtMs === null && clsVal === null) {
+    cwvResult = {
+      name: CWV_AUDIT_NAME,
+      status: 'warn',
+      score: 50,
+      message: 'Core Web Vitals data could not be retrieved from PageSpeed Insights.',
+    };
+  } else {
+    const lcpGood = lcpMs !== null && lcpMs <= CWV_THRESHOLDS.lcp;
+    const tbtGood = tbtMs !== null && tbtMs <= CWV_THRESHOLDS.tbt;
+    const clsGood = clsVal !== null && clsVal <= CWV_THRESHOLDS.cls;
+    const goodCount = [lcpGood, tbtGood, clsGood].filter(Boolean).length;
+
+    const score = goodCount === 3 ? 100 : goodCount === 2 ? 60 : 20;
+    const status = goodCount === 3 ? 'pass' : goodCount === 2 ? 'warn' : 'fail';
+
+    const detailParts = [
+      `LCP: ${lcp} (threshold ≤${CWV_THRESHOLDS.lcp / 1000}s) — ${lcpGood ? 'Good' : 'Needs improvement'}`,
+      `TBT: ${tbt} (threshold ≤${CWV_THRESHOLDS.tbt}ms) — ${tbtGood ? 'Good' : 'Needs improvement'}`,
+      `CLS: ${cls} (threshold ≤${CWV_THRESHOLDS.cls}) — ${clsGood ? 'Good' : 'Needs improvement'}`,
+    ];
+
+    const failing = [];
+    if (!lcpGood) failing.push(`LCP ${lcp} — use faster hosting, preload hero images, and defer non-critical JS`);
+    if (!tbtGood) failing.push(`TBT ${tbt} — reduce long JavaScript tasks, split code, and defer third-party scripts`);
+    if (!clsGood) failing.push(`CLS ${cls} — set explicit width/height on images and avoid inserting content above existing elements`);
+
+    cwvResult = {
+      name: CWV_AUDIT_NAME,
+      status,
+      score,
+      message:
+        goodCount === 3
+          ? `All Core Web Vitals are in the "Good" range. LCP: ${lcp} | TBT: ${tbt} | CLS: ${cls}`
+          : `${3 - goodCount} Core Web Vital(s) need improvement. LCP: ${lcp} | TBT: ${tbt} | CLS: ${cls}`,
+      details: detailParts.join('\n    '),
+      ...(failing.length && {
+        recommendation:
+          'Core Web Vitals are a Google ranking signal. Improve the following:\n    • ' +
+          failing.join('\n    • '),
+      }),
+    };
+  }
+
+  return [pageSpeedResult, mobileResult, cwvResult];
 }
 
 module.exports = checkPageSpeed;

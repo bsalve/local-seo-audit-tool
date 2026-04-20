@@ -304,7 +304,8 @@
       padding: 14px 0 14px 12px;
       display: grid;
       grid-template-columns: 16px 1fr auto;
-      gap: 14px;
+      column-gap: 14px;
+      row-gap: 0;
       align-items: start;
       break-inside: avoid;
       border-left: 2px solid transparent;
@@ -428,6 +429,23 @@
     .exec-item.is-warn { border-left-color: #ffb800; }
     .exec-item.is-pass { border-left-color: #34d399; }
 
+    /* ── SITE REPORT: stacked coverage bar ── */
+    .stacked-bar {
+      grid-column: 1 / -1;
+      height: 2px;
+      display: flex;
+      margin-top: 8px;
+    }
+    .stacked-seg { height: 100%; }
+
+    /* ── SITE REPORT: category card label ── */
+    .cat-score-site-label {
+      font-size: 8px;
+      color: #8892a4;
+      letter-spacing: 0.08em;
+      margin-top: 3px;
+    }
+
     /* ── WHITE-LABEL LOGO ── */
     .agency-logo {
       max-height: 56px;
@@ -508,24 +526,28 @@
       <div class="cat-score-num">{{catScores.technical.score}}<span class="cat-score-denom">/100</span></div>
       <div class="cat-score-grade" style="color:#8892a4">{{catScores.technical.grade}}</div>
       <div class="cat-mini-track"><div class="cat-mini-fill" style="width:{{catScores.technical.score}}%;background:#8892a4;print-color-adjust:exact;-webkit-print-color-adjust:exact;"></div></div>
+      {{#if isSiteReport}}<div class="cat-score-site-label">across {{pageCount}} pages</div>{{/if}}
     </div>
     <div class="cat-score-cell" style="border-left:3px solid #e8a87c">
       <div class="cat-score-name" style="color:#e8a87c">Content</div>
       <div class="cat-score-num">{{catScores.content.score}}<span class="cat-score-denom">/100</span></div>
       <div class="cat-score-grade" style="color:#e8a87c">{{catScores.content.grade}}</div>
       <div class="cat-mini-track"><div class="cat-mini-fill" style="width:{{catScores.content.score}}%;background:#e8a87c;print-color-adjust:exact;-webkit-print-color-adjust:exact;"></div></div>
+      {{#if isSiteReport}}<div class="cat-score-site-label">across {{pageCount}} pages</div>{{/if}}
     </div>
     <div class="cat-score-cell" style="border-left:3px solid #7baeff">
       <div class="cat-score-name" style="color:#7baeff">AEO</div>
       <div class="cat-score-num">{{catScores.aeo.score}}<span class="cat-score-denom">/100</span></div>
       <div class="cat-score-grade" style="color:#7baeff">{{catScores.aeo.grade}}</div>
       <div class="cat-mini-track"><div class="cat-mini-fill" style="width:{{catScores.aeo.score}}%;background:#7baeff;print-color-adjust:exact;-webkit-print-color-adjust:exact;"></div></div>
+      {{#if isSiteReport}}<div class="cat-score-site-label">across {{pageCount}} pages</div>{{/if}}
     </div>
     <div class="cat-score-cell" style="border-left:3px solid #b07bff">
       <div class="cat-score-name" style="color:#b07bff">GEO</div>
       <div class="cat-score-num">{{catScores.geo.score}}<span class="cat-score-denom">/100</span></div>
       <div class="cat-score-grade" style="color:#b07bff">{{catScores.geo.grade}}</div>
       <div class="cat-mini-track"><div class="cat-mini-fill" style="width:{{catScores.geo.score}}%;background:#b07bff;print-color-adjust:exact;-webkit-print-color-adjust:exact;"></div></div>
+      {{#if isSiteReport}}<div class="cat-score-site-label">across {{pageCount}} pages</div>{{/if}}
     </div>
   </div>
 
@@ -536,7 +558,11 @@
       {{#each top7Fails}}
       <div class="exec-item is-{{status}}">
         <div class="exec-item-name">{{name}}</div>
+        {{#if (isDefined pctFail)}}
+        <div class="exec-item-msg" style="color:#ff4455">Failing on {{pctFail}}% of pages ({{failCount}}/{{totalPages}})</div>
+        {{else}}
         <div class="exec-item-msg">{{message}}</div>
+        {{/if}}
       </div>
       {{/each}}
     </div>
@@ -545,7 +571,11 @@
       {{#each top7Passes}}
       <div class="exec-item is-pass">
         <div class="exec-item-name">{{name}}</div>
+        {{#if (isDefined pctPass)}}
+        <div class="exec-item-msg" style="color:#34d399">Passing on {{pctPass}}% of pages</div>
+        {{else}}
         <div class="exec-item-msg">{{message}}</div>
+        {{/if}}
       </div>
       {{/each}}
     </div>
@@ -570,14 +600,25 @@
         </div>
         {{/if}}
         {{#if (isDefined normalizedScore)}}
+        {{#unless ../isSiteReport}}
         <div class="row-bar">
           <div class="row-bar-fill bar-{{status}}" style="width:{{normalizedScore}}%"></div>
         </div>
+        {{/unless}}
         {{/if}}
       </div>
       <div class="row-score rscore-{{status}}">
         {{#if (isDefined normalizedScore)}}{{#if ../isSiteReport}}{{normalizedScore}}%{{else}}{{normalizedScore}}/100{{/if}}{{/if}}
       </div>
+      {{#if (isDefined normalizedScore)}}
+      {{#if ../isSiteReport}}
+      <div class="stacked-bar">
+        <div class="stacked-seg" style="width:{{pctFail}}%;background:#ff4455;print-color-adjust:exact;-webkit-print-color-adjust:exact;"></div>
+        <div class="stacked-seg" style="width:{{pctWarn}}%;background:#ffb800;print-color-adjust:exact;-webkit-print-color-adjust:exact;"></div>
+        <div class="stacked-seg" style="width:{{pctPass}}%;background:#34d399;print-color-adjust:exact;-webkit-print-color-adjust:exact;"></div>
+      </div>
+      {{/if}}
+      {{/if}}
     </div>
     {{/each}}
   </div>
@@ -602,14 +643,25 @@
         </div>
         {{/if}}
         {{#if (isDefined normalizedScore)}}
+        {{#unless ../isSiteReport}}
         <div class="row-bar">
           <div class="row-bar-fill bar-{{status}}" style="width:{{normalizedScore}}%"></div>
         </div>
+        {{/unless}}
         {{/if}}
       </div>
       <div class="row-score rscore-{{status}}">
         {{#if (isDefined normalizedScore)}}{{#if ../isSiteReport}}{{normalizedScore}}%{{else}}{{normalizedScore}}/100{{/if}}{{/if}}
       </div>
+      {{#if (isDefined normalizedScore)}}
+      {{#if ../isSiteReport}}
+      <div class="stacked-bar">
+        <div class="stacked-seg" style="width:{{pctFail}}%;background:#ff4455;print-color-adjust:exact;-webkit-print-color-adjust:exact;"></div>
+        <div class="stacked-seg" style="width:{{pctWarn}}%;background:#ffb800;print-color-adjust:exact;-webkit-print-color-adjust:exact;"></div>
+        <div class="stacked-seg" style="width:{{pctPass}}%;background:#34d399;print-color-adjust:exact;-webkit-print-color-adjust:exact;"></div>
+      </div>
+      {{/if}}
+      {{/if}}
     </div>
     {{/each}}
   </div>
@@ -635,14 +687,25 @@
         </div>
         {{/if}}
         {{#if (isDefined normalizedScore)}}
+        {{#unless ../isSiteReport}}
         <div class="row-bar">
           <div class="row-bar-fill bar-{{status}}" style="width:{{normalizedScore}}%"></div>
         </div>
+        {{/unless}}
         {{/if}}
       </div>
       <div class="row-score rscore-{{status}}">
         {{#if (isDefined normalizedScore)}}{{#if ../isSiteReport}}{{normalizedScore}}%{{else}}{{normalizedScore}}/100{{/if}}{{/if}}
       </div>
+      {{#if (isDefined normalizedScore)}}
+      {{#if ../isSiteReport}}
+      <div class="stacked-bar">
+        <div class="stacked-seg" style="width:{{pctFail}}%;background:#ff4455;print-color-adjust:exact;-webkit-print-color-adjust:exact;"></div>
+        <div class="stacked-seg" style="width:{{pctWarn}}%;background:#ffb800;print-color-adjust:exact;-webkit-print-color-adjust:exact;"></div>
+        <div class="stacked-seg" style="width:{{pctPass}}%;background:#34d399;print-color-adjust:exact;-webkit-print-color-adjust:exact;"></div>
+      </div>
+      {{/if}}
+      {{/if}}
     </div>
     {{/each}}
   </div>
@@ -668,14 +731,25 @@
         </div>
         {{/if}}
         {{#if (isDefined normalizedScore)}}
+        {{#unless ../isSiteReport}}
         <div class="row-bar">
           <div class="row-bar-fill bar-{{status}}" style="width:{{normalizedScore}}%"></div>
         </div>
+        {{/unless}}
         {{/if}}
       </div>
       <div class="row-score rscore-{{status}}">
         {{#if (isDefined normalizedScore)}}{{#if ../isSiteReport}}{{normalizedScore}}%{{else}}{{normalizedScore}}/100{{/if}}{{/if}}
       </div>
+      {{#if (isDefined normalizedScore)}}
+      {{#if ../isSiteReport}}
+      <div class="stacked-bar">
+        <div class="stacked-seg" style="width:{{pctFail}}%;background:#ff4455;print-color-adjust:exact;-webkit-print-color-adjust:exact;"></div>
+        <div class="stacked-seg" style="width:{{pctWarn}}%;background:#ffb800;print-color-adjust:exact;-webkit-print-color-adjust:exact;"></div>
+        <div class="stacked-seg" style="width:{{pctPass}}%;background:#34d399;print-color-adjust:exact;-webkit-print-color-adjust:exact;"></div>
+      </div>
+      {{/if}}
+      {{/if}}
     </div>
     {{/each}}
   </div>

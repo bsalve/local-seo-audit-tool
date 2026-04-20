@@ -1,5 +1,4 @@
-const axios = require('axios');
-const cheerio = require('cheerio');
+'use strict';
 
 const AUDIT_NAME = '[Content] NAP Consistency';
 
@@ -50,9 +49,13 @@ const ADDRESS_PATTERNS = [
 // ---------------------------------------------------------------------------
 
 function extractText($) {
-  // Remove script/style noise before extracting visible text
-  $('script, style, noscript').remove();
-  return $.root().text().replace(/\s+/g, ' ');
+  // Clone body before removing elements — do NOT mutate the shared $ passed in
+  // from the crawler, which other audits also use.
+  let text = $('body').clone().find('script, style, noscript').remove().end().text();
+  // Also append tel: hrefs so click-to-call links are detected even when the
+  // anchor text doesn't include the phone number in a matchable format.
+  $('a[href^="tel:"]').each((_, el) => { text += ' ' + ($(el).attr('href') || ''); });
+  return text.replace(/\s+/g, ' ');
 }
 
 function testPatterns(text, patterns) {
@@ -64,36 +67,17 @@ function testPatterns(text, patterns) {
 }
 
 // ---------------------------------------------------------------------------
-// Main audit
+// Main audit — uses the $ already fetched by the caller, no extra HTTP request
 // ---------------------------------------------------------------------------
 
-async function checkNAP($passedIn, html, url) {
-  let $;
-
-  try {
-    const response = await axios.get(url, {
-      headers: { 'User-Agent': 'LocalSEOAuditBot/1.0' },
-      timeout: 10000,
-    });
-    $ = cheerio.load(response.data);
-  } catch (err) {
-    return {
-      name: AUDIT_NAME,
-      status: 'fail',
-      score: 0,
-      message: `Failed to fetch page for NAP analysis: ${err.message}`,
-      recommendation:
-        'Ensure the URL is reachable and returns a valid HTML response before running this audit.',
-    };
-  }
-
+function checkNAP($, html, url) {
   const pageText = extractText($);
 
-  const phoneMatch = testPatterns(pageText, PHONE_PATTERNS);
+  const phoneMatch   = testPatterns(pageText, PHONE_PATTERNS);
   const addressMatch = testPatterns(pageText, ADDRESS_PATTERNS);
 
   // Score: 50 points each
-  const phoneScore = phoneMatch ? 50 : 0;
+  const phoneScore   = phoneMatch   ? 50 : 0;
   const addressScore = addressMatch ? 50 : 0;
   const score = phoneScore + addressScore;
 
@@ -137,7 +121,7 @@ async function checkNAP($passedIn, html, url) {
     message: `NAP check incomplete — missing: ${missing.join(' and ')}.`,
     recommendation: recommendations.join('\n    '),
     details: [
-      phoneMatch ? `Phone: "${phoneMatch}"` : 'Phone: not found',
+      phoneMatch   ? `Phone: "${phoneMatch}"`     : 'Phone: not found',
       addressMatch ? `Address: "${addressMatch}"` : 'Address: not found',
     ].join(' | '),
   };

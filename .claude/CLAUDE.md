@@ -269,6 +269,10 @@ Previously broke this by applying a blue accent change to pass-colored score rea
 
 7. **New audit files not appearing in results after adding them** — `server.js` calls `readdirSync` once at startup and caches the audit list. Adding new `/audits/*.js` files while the server is running has no effect until the server is restarted. Always restart the server after adding new audit modules. (The `index.html` STEPS array and the PDF template do not require a restart — they are served/read fresh each time.)
 
+8. **Stacked bars in site audit had inconsistent widths** — The stacked bar was nested inside the `1fr` middle column div. The `1fr` column width = total width − icon − `auto` counts/score column. Since the `auto` column varies per row (different character counts), `1fr` was different on every row, making bars different widths. Fix: make `.site-stacked-bar` / `.stacked-bar` a **direct child of `.result-row`** with `grid-column: 1 / -1` so it auto-places to a new grid row spanning the full width. Also change `gap` to `column-gap` (row-gap → 0) so the bar sits directly below the content row, spaced only by its own `margin-top`. Applied to both the web UI and the PDF template.
+
+9. **Crawler did not skip non-HTML files (PDFs, images, etc.)** — The BFS crawler was enqueuing all same-origin links including `.pdf`, `.jpg`, and other binary files. When a PDF was downloaded, `cheerio.load()` spent 20-40 seconds parsing binary data as HTML, and all 64 DOM-based audits ran on garbage DOM. On chipotle.com, pages 27-36 were all PDFs — each took 23-45 seconds instead of under 1 second. Fix: `NON_HTML_EXTENSIONS` set in `crawler.js` filters non-HTML extensions before enqueueing (primary fix) and `fetcher.js` checks `Content-Type` before calling `cheerio.load()` (safety net for extensionless URLs serving binary data). Always filter by extension at enqueue time AND at the top of the crawl loop (defense in depth).
+
 ## Server Notes
 
 - `open` package (v9+) is ESM-only — use `import('open').then(m => m.default(url))`, not `require('open')`
@@ -283,15 +287,22 @@ Previously broke this by applying a blue accent change to pass-colored score rea
 - `gradeSummary` is imported from `./utils/score` in `server.js` and used to build the site audit PDF `summary` field
 - Site audit PDF input passes `summary` (grade description only) and `siteAuditLine` (`"Site audit · N pages crawled"`) as separate fields so the template can render them on separate lines
 
-## Site Audit (`utils/crawler.js`)
+## Site Audit (`utils/crawler.js` + `utils/pageWorker.js`)
 
 BFS crawler, same-origin only. `crawlSite(startUrl, { maxPages, onProgress })` returns `pages[]` each `{ url, results[] }`. `aggregateResults(pages)` collapses into `{ name, fail: [url,...], warn: [url,...], pass: [url,...], recommendation, message }[]` sorted by fail count desc. `recommendation` and `message` are populated from the first non-null occurrence across all pages for that check name.
+
+**Worker thread architecture:** Each page is processed in a dedicated worker thread (`utils/pageWorker.js`) with an isolated V8 heap capped at 1 GB (`resourceLimits.maxOldGenerationSizeMb`). When the worker exits, its entire heap (cheerio DOM, HTML string, audit locals) is freed — no accumulation across pages. Workers run sequentially (one at a time). A 45-second timeout per page terminates hung workers automatically.
 
 **Audits skipped** (make extra HTTP calls — too slow at 50-page scale):
 - `checkPageSpeed.js` — PSI API
 - `technicalBrokenLinks.js` — HEADs 20 links per page
 - `technicalCanonicalChain.js` — fetches canonical target URL
 - `contentOGImageCheck.js` — HEADs og:image URL
+- `technicalRedirectChain.js` — up to 10 sequential GETs per page chasing redirects
+- `checkCrawlability.js` — fetches /robots.txt + /sitemap.xml (domain-level, same for every page)
+- `technicalRobotsSafety.js` — fetches /robots.txt (domain-level, same for every page)
+
+**⚠ Audit memory rule:** Audit functions MUST use the `$` and `html` arguments passed in by the crawler — never re-fetch the page with their own `axios.get(url)`. Re-fetching creates a second cheerio DOM per page (50-100 MB each), which across a 50-page crawl accumulates 4+ GB and causes OOM. `checkNAP.js` and `checkMetaTags.js` were previously broken this way and have been fixed.
 
 **SSE event shapes streamed from `/crawl`:**
 - `{ type: 'progress', crawled: N, total: 50, url: '...' }` — fired before each page fetch
@@ -303,10 +314,11 @@ BFS crawler, same-origin only. `crawlSite(startUrl, { maxPages, onProgress })` r
 - Summary stats row: checks-with-fails / warnings-only / all-passing counts
 - PDF download button (centered, shown only when `pdfFile` is truthy): links to `/output/{pdfFile}`
 - **Top Issues** (7 items): sorted by fail count, shows check name + `N% of pages affected`
-- **Issue Breakdown**: sorted by `categoryOrder()`, category headers injected, each row has `+ N pages affected` toggle (expands affected URL list) and `+ recommendation` toggle (expands recommendation text)
-- **What's Working** (collapsed by default): category-grouped list of all-passing checks; collapsed `✓ What's Working (N checks)` button signals passes exist without obstructing triage flow
+- **Issue Breakdown**: sorted by `categoryOrder()`, category headers injected, each row has a **stacked pass/warn/fail bar** (red/amber/green, proportional to page count) + `+ N pages affected` toggle + `+ recommendation` toggle
+- **What's Working** (collapsed by default): category-grouped list of all-passing checks with a solid green stacked bar; collapsed `✓ What's Working (N checks)` button signals passes exist without obstructing triage flow
 - `toggleSiteRow(i)` / `toggleSiteRec(id)` / `toggleSiteWorking()` — row-level toggle helpers
-- New CSS classes: `.site-grade-block`, `.site-grade-letter`, `.site-grade-score`, `.site-grade-label`, `.site-top-pct`, `.site-working-toggle`, `.site-working-rows`
+- New CSS classes: `.site-grade-block`, `.site-grade-letter`, `.site-grade-score`, `.site-grade-label`, `.site-top-pct`, `.site-working-toggle`, `.site-working-rows`, `.site-stacked-bar`, `.site-stacked-seg`
+- **Stacked bar layout rule:** `.site-stacked-bar` must be a **direct child of `.result-row`** (not nested inside the inner div) with `grid-column: 1 / -1`. This ensures all bars span the same full row width. `.result-row` uses `column-gap: 16px; row-gap: 0` so the bar auto-places to a new grid row with only `margin-top: 8px` spacing.
 
 ## Known Issues
 
@@ -317,7 +329,6 @@ BFS crawler, same-origin only. `crawlSite(startUrl, { maxPages, onProgress })` r
 
 ## To-Do
 
-- **Improve visuals for site-wide PDF report** — layout, spacing, and styling pass to match the polish of the page audit PDF. Currently functional but basic.
 - **Multi-location Audit** — run Page Audit against several URLs at once, aggregate and compare scores across locations. Natural upsell tier for agencies managing multi-location clients.
 - **Monetization** — pricing tiers, payment integration, and feature gating (e.g. higher crawl limits, historical tracking, scheduled audits). Design when feature set is more stable.
 

@@ -4,7 +4,7 @@
   "description": "Search visibility audit tool covering SEO, AEO, and GEO",
   "main": "index.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "node --max-old-space-size=4096 server.js",
     "cli": "node index.js"
   },
   "keywords": [

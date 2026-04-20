@@ -13,7 +13,7 @@ try {
 } catch (_) {}
 
 const { fetchPage }              = require('./utils/fetcher');
-const { generatePDF }            = require('./utils/generatePDF');
+const { generatePDF, generateMultiPDF } = require('./utils/generatePDF');
 const { calcTotalScore, letterGrade, gradeSummary, buildJsonOutput } = require('./utils/score');
 const { crawlSite, aggregateResults } = require('./utils/crawler');
 
@@ -77,6 +77,60 @@ app.post('/audit', async (req, res) => {
   }
 });
 
+// Multi-location audit — runs page audits against up to 10 URLs in parallel
+app.post('/multi-audit', async (req, res) => {
+  const { urls } = req.body;
+  if (!Array.isArray(urls) || urls.length === 0) {
+    return res.status(400).json({ error: 'urls array is required' });
+  }
+  if (urls.length > 10) {
+    return res.status(400).json({ error: 'Maximum 10 URLs allowed' });
+  }
+
+  // Validate: http/https only
+  const validUrls = urls
+    .map(u => (typeof u === 'string' ? u.trim() : ''))
+    .filter(u => { try { const p = new URL(u); return p.protocol === 'http:' || p.protocol === 'https:'; } catch { return false; } });
+
+  if (validUrls.length === 0) {
+    return res.status(400).json({ error: 'No valid http/https URLs provided' });
+  }
+
+  try {
+    const settled = await Promise.allSettled(
+      validUrls.map(async (url) => {
+        const { html, $, headers, finalUrl, responseTimeMs } = await fetchPage(url);
+        const meta    = { headers, finalUrl, responseTimeMs };
+        const results = (await Promise.all(audits.map((a) => a($, html, url, meta)))).flat();
+        const score   = calcTotalScore(results);
+        const grade   = letterGrade(score);
+        return buildJsonOutput(url, results, score, grade);
+      })
+    );
+
+    const locations = settled.map((r, i) =>
+      r.status === 'fulfilled'
+        ? r.value
+        : { url: validUrls[i], error: r.reason?.message || 'Audit failed', results: [], totalScore: 0, grade: 'F' }
+    );
+
+    let pdfFile = null;
+    const successful = locations.filter(l => !l.error);
+    if (successful.length > 0) {
+      try {
+        const pdfPath = await generateMultiPDF(successful);
+        pdfFile = path.basename(pdfPath);
+      } catch (e) {
+        console.error('Multi-audit PDF generation failed:', e.message);
+      }
+    }
+
+    res.json({ locations, pdfFile });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 function transformSiteResultsForPDF(aggregated, pageCount) {
   return aggregated.map(r => {
     const total = r.fail.length + r.warn.length + r.pass.length || pageCount;
@@ -90,7 +144,15 @@ function transformSiteResultsForPDF(aggregated, pageCount) {
     } else {
       details = `Passing on all ${r.pass.length} crawled pages`;
     }
-    return { name: r.name, status, normalizedScore, message: r.message || '', details, recommendation: r.recommendation || undefined };
+    const pctFail = Math.round(r.fail.length / pageCount * 100);
+    const pctWarn = Math.round(r.warn.length / pageCount * 100);
+    const pctPass = 100 - pctFail - pctWarn;
+    return {
+      name: r.name, status, normalizedScore, message: r.message || '', details,
+      recommendation: r.recommendation || undefined,
+      failCount: r.fail.length, warnCount: r.warn.length, passCount: r.pass.length,
+      totalPages: pageCount, pctFail, pctWarn, pctPass,
+    };
   });
 }
 
@@ -130,7 +192,7 @@ app.get('/crawl', async (req, res) => {
     };
     let pdfFile = null;
     try {
-      const pdfPath = await generatePDF(pdfInput, { prefix: 'signalgrade-site', isSiteReport: true });
+      const pdfPath = await generatePDF(pdfInput, { prefix: 'signalgrade-site', isSiteReport: true, pageCount: pages.length });
       pdfFile = path.basename(pdfPath);
     } catch (e) {
       console.error('Site audit PDF generation failed:', e.message);

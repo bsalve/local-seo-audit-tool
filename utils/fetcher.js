@@ -11,6 +11,13 @@ async function fetchPage(url) {
   });
   const responseTimeMs = Date.now() - start;
 
+  const contentType = response.headers['content-type'] || '';
+  if (!contentType.includes('text/html')) {
+    // Non-HTML response (PDF, image, etc.) — return empty DOM so audits get nothing
+    // rather than spending 20-40s letting cheerio parse binary data as HTML.
+    return { html: '', $: cheerio.load(''), headers: response.headers, finalUrl, responseTimeMs };
+  }
+
   const html = response.data;
   const $ = cheerio.load(html);
   const headers = response.headers;

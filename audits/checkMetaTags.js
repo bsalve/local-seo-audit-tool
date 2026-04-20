@@ -1,13 +1,12 @@
-const axios = require('axios');
-const cheerio = require('cheerio');
+'use strict';
 
 const AUDIT_NAME = '[Content] Meta Tags';
 
 // Scoring: 10 points for title, 10 points for description = 20 total
 const TITLE_MIN = 30;
 const TITLE_MAX = 60;
-const DESC_MIN = 70;
-const DESC_MAX = 160;
+const DESC_MIN  = 70;
+const DESC_MAX  = 160;
 
 function checkTitle($) {
   const text = $('title').first().text().trim();
@@ -43,7 +42,7 @@ function checkTitle($) {
       message: `Title tag is too long (${text.length} chars). Google truncates titles above ~${TITLE_MAX} characters.`,
       recommendation:
         `Shorten your title to ${TITLE_MIN}–${TITLE_MAX} characters so it displays in full on search results pages. ` +
-        'Prioritise your keyword and location at the front of the title.',
+        'Prioritize your keyword and location at the front of the title.',
       details: text,
     };
   }
@@ -58,7 +57,7 @@ function checkTitle($) {
 
 function checkDescription($) {
   const content = $('meta[name="description"]').attr('content') || '';
-  const text = content.trim();
+  const text    = content.trim();
 
   if (!text) {
     return {
@@ -105,46 +104,23 @@ function checkDescription($) {
   };
 }
 
-async function checkMetaTags($passedIn, html, url) {
-  let $;
-
-  try {
-    const response = await axios.get(url, {
-      headers: { 'User-Agent': 'LocalSEOAuditBot/1.0' },
-      timeout: 10000,
-    });
-    $ = cheerio.load(response.data);
-  } catch (err) {
-    return {
-      name: AUDIT_NAME,
-      status: 'fail',
-      score: 0,
-      maxScore: 20,
-      message: `Failed to fetch page for meta tag analysis: ${err.message}`,
-      recommendation:
-        'Ensure the URL is reachable and returns a valid HTML response. ' +
-        'Check for redirects, authentication walls, or firewall rules blocking the request.',
-    };
-  }
-
+// Uses the $ already fetched by the caller — no extra HTTP request needed.
+function checkMetaTags($, html, url) {
   const titleResult = checkTitle($);
-  const descResult = checkDescription($);
+  const descResult  = checkDescription($);
 
-  const totalScore = titleResult.score + descResult.score;
+  const totalScore    = titleResult.score + descResult.score;
   const overallStatus =
-    titleResult.status === 'fail' || descResult.status === 'fail'
-      ? 'fail'
-      : titleResult.status === 'warn' || descResult.status === 'warn'
-      ? 'warn'
-      : 'pass';
+    titleResult.status === 'fail' || descResult.status === 'fail' ? 'fail' :
+    titleResult.status === 'warn' || descResult.status === 'warn' ? 'warn' : 'pass';
 
   const checks = [];
   if (titleResult.status !== 'pass') checks.push(`Title: ${titleResult.message}`);
-  if (descResult.status !== 'pass') checks.push(`Description: ${descResult.message}`);
+  if (descResult.status  !== 'pass') checks.push(`Description: ${descResult.message}`);
 
   const recommendations = [];
   if (titleResult.recommendation) recommendations.push(`Title — ${titleResult.recommendation}`);
-  if (descResult.recommendation) recommendations.push(`Description — ${descResult.recommendation}`);
+  if (descResult.recommendation)  recommendations.push(`Description — ${descResult.recommendation}`);
 
   return {
     name: AUDIT_NAME,
@@ -157,11 +133,9 @@ async function checkMetaTags($passedIn, html, url) {
         : checks.join(' | '),
     recommendation: recommendations.length ? recommendations.join('\n    ') : undefined,
     details: [
-      titleResult.details ? `Title: "${titleResult.details}"` : null,
-      descResult.details ? `Description: "${descResult.details}"` : null,
-    ]
-      .filter(Boolean)
-      .join('\n    ') || undefined,
+      titleResult.details ? `Title: "${titleResult.details}"`       : null,
+      descResult.details  ? `Description: "${descResult.details}"` : null,
+    ].filter(Boolean).join('\n    ') || undefined,
   };
 }
 

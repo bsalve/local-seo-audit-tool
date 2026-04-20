@@ -111,7 +111,7 @@
     /* Mode toggle */
     .mode-toggle {
       display: flex; gap: 0; justify-content: center;
-      border: 1px solid var(--dim2); max-width: 280px;
+      border: 1px solid var(--dim2); max-width: 360px;
       margin: 0 auto 28px; background: var(--bg2);
     }
     .mode-btn {
@@ -184,14 +184,14 @@
       font-size: 14px; padding: 16px 20px; caret-color: var(--accent);
     }
     #urlInput::placeholder { color: var(--muted); }
-    #auditBtn {
+    #auditBtn, #multiAuditBtn {
       background: var(--accent); color: #000; border: none;
       font-family: 'Space Mono', monospace; font-size: 12px;
       font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
       padding: 0 28px; cursor: pointer; white-space: nowrap;
     }
-    #auditBtn:hover    { background: #76baff; }
-    #auditBtn:disabled { background: #1a3a5c; color: #3a6fa8; cursor: not-allowed; }
+    #auditBtn:hover, #multiAuditBtn:hover { background: #76baff; }
+    #auditBtn:disabled, #multiAuditBtn:disabled { background: #1a3a5c; color: #3a6fa8; cursor: not-allowed; }
 
     /* Status / steps */
     #statusArea { margin-top: 24px; max-width: 720px; min-height: 48px; margin-left: auto; margin-right: auto; }
@@ -420,7 +420,7 @@
     .result-row {
       border-top: 1px solid var(--border); padding: 20px 0;
       display: grid; grid-template-columns: 18px 1fr auto;
-      gap: 16px; align-items: start;
+      column-gap: 16px; row-gap: 0; align-items: start;
     }
     .result-row:last-child { border-bottom: 1px solid var(--border); }
 
@@ -448,6 +448,9 @@
 
     .row-bar { grid-column: 2 / -1; height: 2px; background: var(--border); margin-top: 6px; }
     .row-bar-fill { height: 100%; }
+
+    .site-stacked-bar { grid-column: 1 / -1; height: 2px; display: flex; margin-top: 8px; background: var(--border); overflow: hidden; }
+    .site-stacked-seg { height: 100%; }
 
     .row-score-val {
       font-size: 12px; font-weight: 700; white-space: nowrap; padding-top: 2px; text-align: right;
@@ -561,6 +564,91 @@
     }
     .site-working-toggle:hover { opacity: 0.8; }
     .site-working-rows { display: none; margin-top: 12px; }
+
+    /* ─── Multi-location audit ─── */
+    #multiUrlsWrap { max-width: 720px; margin: 0 auto; }
+    #multiUrls {
+      width: 100%; background: var(--bg2); border: 1px solid var(--dim2);
+      color: var(--text); font-family: 'Space Mono', monospace; font-size: 13px;
+      padding: 14px 20px; outline: none; caret-color: var(--accent);
+      resize: vertical; min-height: 120px; line-height: 1.7;
+    }
+    #multiUrls:focus { border-color: var(--accent); }
+    #multiUrls::placeholder { color: var(--muted); }
+    .multi-limit-note {
+      font-size: 11px; color: var(--muted); letter-spacing: 0.06em;
+      margin-top: 8px; text-align: left;
+    }
+
+    /* Multi result cards */
+    .multi-loc-cards {
+      display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 32px; justify-content: center;
+    }
+    .multi-loc-card {
+      flex: 1; min-width: 150px; max-width: 220px;
+      background: var(--bg2); border: 1px solid var(--border); border-top-width: 3px;
+      padding: 16px 18px;
+    }
+    .multi-loc-domain {
+      font-family: 'Space Mono', monospace; font-size: 9px; color: var(--muted);
+      margin-bottom: 8px; word-break: break-all;
+    }
+    .multi-loc-grade {
+      font-family: 'Space Mono', monospace; font-size: 48px;
+      font-weight: 700; line-height: 1; margin-bottom: 4px;
+    }
+    .multi-loc-score {
+      font-family: 'Space Mono', monospace; font-size: 16px;
+      font-weight: 700; margin-bottom: 8px;
+    }
+    .multi-loc-denom { font-size: 12px; font-weight: 400; color: var(--muted); }
+    .multi-loc-meter { height: 3px; background: var(--dim2); margin-bottom: 10px; overflow: hidden; }
+    .multi-loc-meter-fill { height: 100%; }
+    .multi-loc-cats { display: flex; gap: 10px; flex-wrap: wrap; }
+    .multi-loc-cat { font-size: 10px; font-family: 'Space Mono', monospace; }
+    .multi-loc-error {
+      font-size: 11px; color: var(--fail); margin-top: 8px; font-style: italic;
+    }
+
+    /* Multi comparison table */
+    .multi-cmp-wrap {
+      overflow-x: auto; margin-bottom: 32px;
+      scrollbar-width: thin; scrollbar-color: var(--dim2) transparent;
+    }
+    .multi-cmp-table {
+      border-collapse: collapse; min-width: 100%;
+    }
+    .multi-cmp-table th {
+      font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--muted); font-weight: 600;
+      padding: 8px 10px; border-bottom: 1px solid var(--dim2);
+      background: var(--bg); text-align: center; white-space: nowrap;
+      position: sticky; top: 0; z-index: 1; min-width: 80px;
+    }
+    .multi-cmp-table th.th-check { text-align: left; min-width: 200px; position: sticky; left: 0; z-index: 2; }
+    .multi-cmp-table td {
+      padding: 8px 10px; border-bottom: 1px solid var(--border);
+      vertical-align: middle; font-size: 12px;
+    }
+    .multi-cmp-table td.td-check {
+      font-weight: 700; color: var(--text);
+      background: var(--bg); position: sticky; left: 0; z-index: 1;
+      min-width: 200px;
+    }
+    .multi-cmp-table td.td-loc { text-align: center; }
+    .multi-cmp-cat-row td {
+      background: var(--bg2); padding: 10px;
+      font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700;
+    }
+    .multi-cmp-cat-row.cat-technical td { color: #8892a4; }
+    .multi-cmp-cat-row.cat-content   td { color: #e8a87c; }
+    .multi-cmp-cat-row.cat-aeo       td { color: #7baeff; }
+    .multi-cmp-cat-row.cat-geo       td { color: #b07bff; }
+    .multi-cell-icon { font-size: 13px; font-weight: 700; display: block; }
+    .multi-cell-icon.pass { color: var(--pass); }
+    .multi-cell-icon.warn { color: var(--warn); }
+    .multi-cell-icon.fail { color: var(--fail); }
+    .multi-cell-score { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); }
   </style>
 </head>
 <body>
@@ -586,20 +674,36 @@
         <div class="mode-toggle">
           <button class="mode-btn active" id="modePageBtn" onclick="setMode('page')">Page Audit</button>
           <button class="mode-btn" id="modeSiteBtn" onclick="setMode('site')">Site Audit</button>
+          <button class="mode-btn" id="modeMultiBtn" onclick="setMode('multi')">Multi</button>
         </div>
         <div class="crawl-limit-note" id="crawlLimitNote" style="display:none">
           Up to 50 pages per crawl<span class="tier-badge">FREE</span>
         </div>
 
-        <div class="input-descriptor">Target URL</div>
-        <div class="input-row">
-          <div class="input-prefix">$ audit</div>
-          <input type="url" id="urlInput" placeholder="https://yoursite.com"
-                 autocomplete="off" spellcheck="false" />
-          <button id="auditBtn">Run →</button>
+        <!-- Single URL input (Page + Site modes) -->
+        <div id="singleInputWrap">
+          <div class="input-descriptor">Target URL</div>
+          <div class="input-row">
+            <div class="input-prefix">$ audit</div>
+            <input type="url" id="urlInput" placeholder="https://yoursite.com"
+                   autocomplete="off" spellcheck="false" />
+            <button id="auditBtn">Run →</button>
+          </div>
         </div>
 
-        <div class="customize-row">
+        <!-- Multi URL input (Multi mode) -->
+        <div id="multiInputWrap" style="display:none">
+          <div class="input-descriptor">Target URLs — one per line</div>
+          <div id="multiUrlsWrap">
+            <textarea id="multiUrls" placeholder="https://location-one.com&#10;https://location-two.com&#10;https://location-three.com" autocomplete="off" spellcheck="false"></textarea>
+            <div class="multi-limit-note">Up to 10 locations<span class="tier-badge" style="margin-left:8px">FREE</span></div>
+          </div>
+          <div class="input-row" style="margin-top:14px">
+            <button id="multiAuditBtn" style="flex:1;padding:16px 28px">Run Multi-location Audit →</button>
+          </div>
+        </div>
+
+        <div class="customize-row" id="customizeRow">
           <button class="customize-toggle" onclick="toggleCustomize()">+ Customize Report</button>
           <div class="customize-panel" id="customizePanel" style="display:none">
             <div class="input-descriptor">Agency Logo URL (optional)</div>
@@ -641,7 +745,11 @@
     currentMode = mode;
     document.getElementById('modePageBtn').classList.toggle('active', mode === 'page');
     document.getElementById('modeSiteBtn').classList.toggle('active', mode === 'site');
-    document.getElementById('crawlLimitNote').style.display = mode === 'site' ? 'block' : 'none';
+    document.getElementById('modeMultiBtn').classList.toggle('active', mode === 'multi');
+    document.getElementById('crawlLimitNote').style.display  = mode === 'site'  ? 'block' : 'none';
+    document.getElementById('singleInputWrap').style.display = mode !== 'multi' ? 'block' : 'none';
+    document.getElementById('multiInputWrap').style.display  = mode === 'multi' ? 'block' : 'none';
+    document.getElementById('customizeRow').style.display    = mode !== 'multi' ? 'block' : 'none';
   }
 
   /* ── Customize panel ── */
@@ -796,8 +904,15 @@
       .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
+  /* ── Domain display helper ── */
+  function toDomain(url) {
+    try { return new URL(url).hostname.replace(/^www\./, ''); }
+    catch { return url; }
+  }
+
   /* ── Main audit fn ── */
   async function runAudit() {
+    if (currentMode === 'multi') { runMultiAudit(); return; }
     const url = document.getElementById('urlInput').value.trim();
     if (!url) { showError('Enter a URL first.'); return; }
     if (currentMode === 'site') { runSiteAudit(url); return; }
@@ -1021,6 +1136,195 @@
     });
   }
 
+  /* ── Multi-location audit ── */
+  async function runMultiAudit() {
+    const raw = document.getElementById('multiUrls').value;
+    const urls = raw.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+    if (urls.length === 0) { showError('Enter at least one URL.'); return; }
+    if (urls.length > 10) { showError('Maximum 10 URLs allowed.'); return; }
+
+    clearError();
+    document.getElementById('multiAuditBtn').disabled = true;
+    const resultsSection = document.getElementById('results');
+    resultsSection.style.display = 'none';
+    resultsSection.classList.remove('visible');
+
+    showProgressUI();
+    document.getElementById('statusText').textContent = `Auditing ${urls.length} location${urls.length !== 1 ? 's' : ''}...`;
+
+    try {
+      const res  = await fetch('/multi-audit', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ urls }),
+      });
+      const data = await res.json();
+
+      document.getElementById('progressFill').style.width = '100%';
+      document.getElementById('statusText').textContent = 'Done.';
+      await new Promise(resolve => setTimeout(resolve, 600));
+      stopSteps();
+
+      if (!res.ok) { showError(data.error || 'Audit failed.'); return; }
+      renderMultiResults(data);
+      resultsSection.style.display = 'block';
+      requestAnimationFrame(() => {
+        resultsSection.scrollIntoView({ behavior: 'smooth' });
+        requestAnimationFrame(() => resultsSection.classList.add('visible'));
+      });
+    } catch (err) {
+      stopSteps();
+      showError('Network error: ' + err.message);
+    } finally {
+      document.getElementById('multiAuditBtn').disabled = false;
+    }
+  }
+
+  function renderMultiResults({ locations, pdfFile }) {
+    const CAT_ORDER = ['[Technical]', '[Content]', '[AEO]', '[GEO]'];
+
+    // Collect all unique check names in category order
+    const allNames = new Set();
+    for (const loc of locations) {
+      if (!loc.error) for (const r of (loc.results || [])) allNames.add(r.name);
+    }
+    const sortedNames = [...allNames].sort((a, b) => {
+      const ia = CAT_ORDER.findIndex(p => a.startsWith(p));
+      const ib = CAT_ORDER.findIndex(p => b.startsWith(p));
+      if (ia !== ib) return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+      return a.localeCompare(b);
+    });
+
+    // Per-location category averages
+    function catAvg(loc, prefix) {
+      if (loc.error) return 0;
+      const items = (loc.results || []).filter(r => r.name.startsWith(prefix));
+      if (!items.length) return 0;
+      return Math.round(items.reduce((s, r) => s + (r.normalizedScore ?? 0), 0) / items.length);
+    }
+
+    // Location cards
+    let cardsHtml = `<div class="multi-loc-cards">`;
+    for (const loc of locations) {
+      const color = loc.error ? 'var(--muted)' : gradeColor(loc.totalScore);
+      const grade = loc.error ? '—' : loc.grade;
+      const score = loc.error ? '—' : loc.totalScore;
+      const domain = toDomain(loc.url);
+      const technical = catAvg(loc, '[Technical]');
+      const content   = catAvg(loc, '[Content]');
+      const aeo       = catAvg(loc, '[AEO]');
+      const geo       = catAvg(loc, '[GEO]');
+      cardsHtml += `
+        <div class="multi-loc-card" style="border-top-color:${color}">
+          <div class="multi-loc-domain">${esc(domain)}</div>
+          <div class="multi-loc-grade" style="color:${color}">${grade}</div>
+          <div class="multi-loc-score" style="color:${color}">${score}${!loc.error ? '<span class="multi-loc-denom">/100</span>' : ''}</div>
+          ${!loc.error ? `<div class="multi-loc-meter"><div class="multi-loc-meter-fill" style="width:${score}%;background:${color}"></div></div>` : ''}
+          ${!loc.error ? `
+          <div class="multi-loc-cats">
+            <span class="multi-loc-cat" style="color:#8892a4">T&nbsp;${technical}</span>
+            <span class="multi-loc-cat" style="color:#e8a87c">C&nbsp;${content}</span>
+            <span class="multi-loc-cat" style="color:#7baeff">A&nbsp;${aeo}</span>
+            <span class="multi-loc-cat" style="color:#b07bff">G&nbsp;${geo}</span>
+          </div>` : `<div class="multi-loc-error">${esc(loc.error)}</div>`}
+        </div>`;
+    }
+    cardsHtml += `</div>`;
+
+    // PDF download
+    const pdfHtml = pdfFile ? `
+      <div style="text-align:center;margin-bottom:32px">
+        <a class="pdf-link in" href="/output/${esc(pdfFile)}" download>
+          <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+          Download Comparison PDF
+        </a>
+      </div>` : '';
+
+    // Common issues: checks failing at the most locations, ranked
+    const CAT_COLORS_UI = { technical: '#8892a4', content: '#e8a87c', aeo: '#7baeff', geo: '#b07bff' };
+    const commonIssues = sortedNames
+      .map(name => {
+        const failCount = locations.filter(loc => !loc.error && (loc.results || []).some(r => r.name === name && r.status === 'fail')).length;
+        const warnCount = locations.filter(loc => !loc.error && (loc.results || []).some(r => r.name === name && r.status === 'warn')).length;
+        return { name, failCount, warnCount };
+      })
+      .filter(c => c.failCount > 0)
+      .sort((a, b) => b.failCount - a.failCount || b.warnCount - a.warnCount);
+
+    let commonIssuesHtml = '';
+    if (commonIssues.length) {
+      commonIssuesHtml = `<div class="detail-label in">Common Issues</div><div class="result-rows in">`;
+      for (const issue of commonIssues) {
+        const cat = resultCategory(issue.name);
+        const catColor = CAT_COLORS_UI[cat];
+        const displayName = issue.name.replace(/^\[(Technical|Content|AEO|GEO)\]\s*/, '');
+        commonIssuesHtml += `
+          <div class="result-row">
+            <div class="row-status fail">${statusIcon('fail')}</div>
+            <div>
+              <div class="row-name">${esc(displayName)}</div>
+              <div class="site-issue-cat cat-${cat}">${CAT_LABELS[cat].short}</div>
+            </div>
+            <div class="site-issue-counts">
+              <span class="site-count-fail" style="font-size:12px">${issue.failCount}/${locations.length} locations</span>
+              ${issue.warnCount ? `<span class="site-count-warn" style="font-size:11px">+${issue.warnCount} warn</span>` : ''}
+            </div>
+          </div>`;
+      }
+      commonIssuesHtml += `</div>`;
+    }
+
+    // Comparison table
+    const colHeaders = locations.map(loc => `<th>${esc(toDomain(loc.url))}</th>`).join('');
+    let tableHtml = `
+      <div class="detail-label in">Check Comparison</div>
+      <div class="multi-cmp-wrap">
+        <table class="multi-cmp-table">
+          <thead>
+            <tr>
+              <th class="th-check">Check</th>
+              ${colHeaders}
+            </tr>
+          </thead>
+          <tbody>`;
+
+    let lastCat = null;
+    for (const name of sortedNames) {
+      const cat = resultCategory(name);
+      if (cat !== lastCat) {
+        const colSpan = locations.length + 1;
+        tableHtml += `<tr class="multi-cmp-cat-row cat-${cat}"><td colspan="${colSpan}">${CAT_LABELS[cat].short} — ${CAT_LABELS[cat].full}</td></tr>`;
+        lastCat = cat;
+      }
+      const displayName = name.replace(/^\[(Technical|Content|AEO|GEO)\]\s*/, '');
+      const cells = locations.map(loc => {
+        if (loc.error) return `<td class="td-loc"><span class="multi-cell-icon" style="color:var(--muted)">—</span></td>`;
+        const r = (loc.results || []).find(x => x.name === name);
+        if (!r) return `<td class="td-loc"><span class="multi-cell-icon" style="color:var(--muted)">—</span></td>`;
+        const icon = r.status === 'pass' ? '✓' : r.status === 'warn' ? '△' : '✕';
+        const hasScore = r.normalizedScore != null;
+        return `<td class="td-loc">
+          <span class="multi-cell-icon ${r.status}">${icon}</span>
+          ${hasScore ? `<div class="multi-cell-score">${r.normalizedScore}</div>` : ''}
+        </td>`;
+      }).join('');
+      tableHtml += `<tr><td class="td-check">${esc(displayName)}</td>${cells}</tr>`;
+    }
+
+    tableHtml += `</tbody></table></div>`;
+
+    document.getElementById('resultsInner').innerHTML = `
+      <div class="site-results-wrap">
+        <div class="site-results-header">
+          <strong>${locations.length} location${locations.length !== 1 ? 's' : ''} audited</strong>
+        </div>
+        ${cardsHtml}
+        ${pdfHtml}
+        ${commonIssuesHtml}
+        ${tableHtml}
+      </div>`;
+  }
+
   /* ── Site audit ── */
   function runSiteAudit(url) {
     clearError();
@@ -1167,6 +1471,9 @@
         const totalAffected = r.fail.length + r.warn.length;
         const affectedUrls = [...r.fail.slice(0, 5), ...r.warn.slice(0, 5)];
         const moreCount = totalAffected - affectedUrls.length;
+        const pctFail = pct(r.fail.length);
+        const pctWarn = pct(r.warn.length);
+        const pctPass = Math.max(0, 100 - pctFail - pctWarn);
         html += `
           <div class="result-row">
             <div class="row-status ${worstStatus}">${statusIcon(worstStatus)}</div>
@@ -1185,6 +1492,11 @@
             <div class="site-issue-counts">
               ${r.fail.length > 0 ? `<span class="site-count-fail">${r.fail.length}/${pageCount} <span style="font-size:9px;font-weight:400">(${pct(r.fail.length)}%)</span></span>` : ''}
               ${r.warn.length > 0 ? `<span class="site-count-warn">${r.warn.length}/${pageCount} <span style="font-size:9px;font-weight:400">(${pct(r.warn.length)}%)</span></span>` : ''}
+            </div>
+            <div class="site-stacked-bar">
+              <div class="site-stacked-seg" style="width:${pctFail}%;background:#ff4455"></div>
+              <div class="site-stacked-seg" style="width:${pctWarn}%;background:#ffb800"></div>
+              <div class="site-stacked-seg" style="width:${pctPass}%;background:#34d399"></div>
             </div>
           </div>`;
       });
@@ -1212,6 +1524,9 @@
               <div class="site-issue-cat cat-${cat}">${CAT_LABELS[cat].short}</div>
             </div>
             <div class="site-issue-counts"><span class="site-count-pass">${r.pass.length}/${pageCount}</span></div>
+            <div class="site-stacked-bar">
+              <div class="site-stacked-seg" style="width:100%;background:#34d399"></div>
+            </div>
           </div>`;
       });
       html += `</div></div>`;
@@ -1258,6 +1573,7 @@
     if (e.key === 'Enter') runAudit();
   });
   document.getElementById('auditBtn').addEventListener('click', runAudit);
+  document.getElementById('multiAuditBtn').addEventListener('click', runMultiAudit);
 </script>
 </body>
 </html>

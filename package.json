@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "start": "node --max-old-space-size=4096 server.js",
-    "cli": "node index.js"
+    "cli": "node index.js",
+    "migrate": "knex migrate:latest",
+    "migrate:rollback": "knex migrate:rollback"
   },
   "keywords": [
     "seo",
@@ -20,10 +22,16 @@
   "dependencies": {
     "axios": "^1.7.0",
     "cheerio": "^1.0.0",
+    "connect-pg-simple": "^10.0.0",
     "express": "^5.2.1",
+    "express-session": "^1.19.0",
     "handlebars": "^4.7.8",
+    "knex": "^3.2.9",
     "multer": "^2.1.1",
     "open": "^11.0.0",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
+    "pg": "^8.20.0",
     "puppeteer": "^24.40.0"
   }
 }

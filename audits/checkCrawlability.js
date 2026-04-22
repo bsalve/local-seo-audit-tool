@@ -43,7 +43,7 @@ async function probe(baseUrl, path) {
   const target = baseUrl + path;
   try {
     const response = await axios.get(target, {
-      headers: { 'User-Agent': 'LocalSEOAuditBot/1.0' },
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' },
       timeout: 10000,
       // Follow redirects but cap at 5 hops to avoid infinite loops
       maxRedirects: 5,

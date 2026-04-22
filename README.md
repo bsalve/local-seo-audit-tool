@@ -9,6 +9,7 @@ A Node.js tool for auditing a website's search visibility across four signal cat
 ## Requirements
 
 - Node.js >= 18
+- PostgreSQL (optional — required only for user accounts and report history)
 
 ---
 
@@ -241,17 +242,51 @@ Every audit produces a dark-themed A4 PDF saved to `/output`:
 
 ---
 
+## User Accounts & Report History
+
+SignalGrade supports optional Google OAuth sign-in backed by PostgreSQL. When enabled:
+
+- A **Sign in** button appears in the navbar on the homepage
+- Every completed audit (page, site, or multi-location) is automatically saved to the database
+- Signed-in users can visit `/dashboard` to see their full report history with grade, score, date, and PDF download links
+- Reports can be deleted individually with an inline confirmation step
+
+**Setup:**
+
+1. Create a PostgreSQL database (local or hosted, e.g. [Neon](https://neon.tech))
+2. Set up Google OAuth credentials in [Google Cloud Console](https://console.cloud.google.com) (APIs & Services → Credentials → OAuth client ID → Web application; add `http://localhost:3000/auth/google/callback` as an authorized redirect URI)
+3. Add to `.env`:
+
+```
+DATABASE_URL=postgresql://user:password@host/dbname
+SESSION_SECRET=<64-char random hex>
+GOOGLE_CLIENT_ID=your_client_id
+GOOGLE_CLIENT_SECRET=your_client_secret
+GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback
+```
+
+4. Run the database migration:
+
+```bash
+npm run migrate
+```
+
+The server runs without these variables — auth is simply disabled and audits work as normal.
+
+---
+
 ## Environment Variables
 
 | Variable | Purpose |
 |---|---|
 | `PAGESPEED_API_KEY` | Google PageSpeed Insights API key — optional, free tier ~400 req/day/IP |
+| `DATABASE_URL` | PostgreSQL connection string — required for user accounts and report history |
+| `SESSION_SECRET` | Random secret for signing session cookies — generate with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID — from Google Cloud Console |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret — from Google Cloud Console |
+| `GOOGLE_CALLBACK_URL` | OAuth redirect URI — use `http://localhost:3000/auth/google/callback` for local dev |
 
-Set in a `.env` file at the project root:
-
-```
-PAGESPEED_API_KEY=your_key_here
-```
+Set in a `.env` file at the project root.
 
 ---
 
@@ -261,17 +296,21 @@ PAGESPEED_API_KEY=your_key_here
 signalgrade/
 ├── index.js                  # CLI entry point
 ├── server.js                 # Express web server (port 3000)
+├── knexfile.js               # Database configuration
 ├── audits/                   # Auto-discovered audit modules (73 checks)
 │   ├── check*.js             # Core checks (SSL, crawlability, meta tags, etc.)
 │   ├── technical*.js         # Technical checks
 │   ├── content*.js           # Content checks
 │   ├── aeo*.js               # AEO checks
 │   └── geo*.js               # GEO checks
+├── db/
+│   └── migrations/           # Knex migration files (users, reports, sessions tables)
 ├── public/
 │   └── index.html            # Single-page web UI (Page / Site / Multi modes)
 ├── templates/
 │   ├── report.hbs            # Handlebars PDF template (page + site audit)
-│   └── multi-report.hbs      # Handlebars PDF template (multi-location)
+│   ├── multi-report.hbs      # Handlebars PDF template (multi-location)
+│   └── dashboard.hbs         # Server-rendered report history page
 ├── utils/
 │   ├── fetcher.js            # axios + cheerio fetcher (returns headers, finalUrl, responseTimeMs)
 │   ├── crawler.js            # BFS site crawler — crawlSite(), aggregateResults()
@@ -279,7 +318,9 @@ signalgrade/
 │   ├── detectDuplicates.js   # Post-crawl: flags duplicate title tags and meta descriptions
 │   ├── detectOrphans.js      # Post-crawl: flags pages with no inbound internal links
 │   ├── generatePDF.js        # Puppeteer PDF renderer (page, site, multi)
-│   └── score.js              # Shared scoring and grading logic
+│   ├── score.js              # Shared scoring and grading logic
+│   ├── auth.js               # Passport.js Google OAuth strategy + requireAuth middleware
+│   └── db.js                 # Knex database instance (null if DATABASE_URL not set)
 └── output/                   # Generated PDFs (gitignored)
 ```
 
@@ -301,9 +342,15 @@ signalgrade/
 | `axios` | HTTP requests |
 | `cheerio` | HTML parsing |
 | `express` | Web server |
+| `express-session` | Session middleware |
+| `connect-pg-simple` | PostgreSQL session store |
+| `passport` | Authentication middleware |
+| `passport-google-oauth20` | Google OAuth 2.0 strategy |
+| `knex` | SQL query builder and migrations |
+| `pg` | PostgreSQL client |
 | `open` | Auto-opens browser on server start |
 | `puppeteer` | Headless browser for PDF generation |
-| `handlebars` | HTML templating for PDF reports |
+| `handlebars` | HTML templating for PDF reports and dashboard |
 
 ---
 

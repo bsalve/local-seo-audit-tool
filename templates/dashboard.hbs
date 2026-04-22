@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — SignalGrade</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scrollbar-gutter: stable; }
+
+    :root {
+      --bg:     #0b0c0e;
+      --bg2:    #111214;
+      --border: #1e2025;
+      --dim2:   #2a2d35;
+      --text:   #e4e6ea;
+      --muted:  #8892a4;
+      --accent: #4d9fff;
+      --warn:   #ffb800;
+      --fail:   #ff4455;
+      --pass:   #34d399;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* ── Navbar — matches homepage meta-row style ───── */
+    .navbar {
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .navbar-inner {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0 32px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-brand {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      text-decoration: none;
+      text-transform: uppercase;
+    }
+    .nav-brand span { color: var(--accent); }
+
+    /* Auth widget — identical classes/styles to index.html */
+    .auth-user { display: flex; align-items: center; gap: 10px; }
+    .auth-avatar { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--border); }
+    .auth-link {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--accent);
+      text-decoration: none;
+      letter-spacing: 0.05em;
+    }
+    .auth-link:hover { text-decoration: underline; }
+    .auth-signout {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      text-decoration: none;
+      letter-spacing: 0.05em;
+    }
+    .auth-signout:hover { color: var(--text); }
+
+    /* ── Page layout ─────────────────────────────────── */
+    .page {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 40px 32px 80px;
+    }
+
+    .page-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 32px;
+    }
+
+    .page-title {
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .page-subtitle {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .btn-new-audit {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: var(--accent);
+      background: none;
+      border: 1px solid var(--accent);
+      border-radius: 4px;
+      padding: 8px 16px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+    .btn-new-audit:hover { background: var(--accent); color: #fff; }
+
+    /* ── Empty state ─────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 80px 24px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg2);
+    }
+
+    .empty-icon { font-size: 40px; margin-bottom: 16px; opacity: 0.4; }
+    .empty-title { font-size: 18px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+    .empty-body { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+
+    /* ── Reports table ───────────────────────────────── */
+    .reports-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .reports-table thead tr { border-bottom: 1px solid var(--border); }
+
+    .reports-table th {
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 0 12px 12px;
+    }
+    .reports-table th:first-child { padding-left: 0; }
+    .reports-table th:last-child  { padding-right: 0; }
+
+    .reports-table tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+    .reports-table tbody tr:hover { background: var(--bg2); }
+
+    .reports-table td {
+      padding: 14px 12px;
+      vertical-align: middle;
+    }
+    .reports-table td:first-child { padding-left: 0; }
+    .reports-table td:last-child  { padding-right: 0; }
+
+    /* Type badge */
+    .type-badge {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 3px;
+      white-space: nowrap;
+    }
+
+    /* URL cell */
+    .report-url {
+      font-size: 13px;
+      color: var(--text);
+      max-width: 300px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Grade / Score cells */
+    .report-grade {
+      font-family: 'Space Mono', monospace;
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .report-score {
+      font-family: 'Space Mono', monospace;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    /* Date cell */
+    .report-date {
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    /* PDF link */
+    .pdf-link {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--accent);
+      text-decoration: none;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 4px 10px;
+      white-space: nowrap;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .pdf-link:hover { border-color: var(--accent); background: rgba(77,159,255,0.07); }
+
+    .no-pdf { font-size: 12px; color: var(--dim2); }
+
+    /* ── Delete controls ─────────────────────────────── */
+    .btn-delete {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 4px 10px;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .btn-delete:hover { color: var(--fail); border-color: var(--fail); }
+
+    .del-confirm {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .btn-del-yes {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: #fff;
+      background: var(--fail);
+      border: none;
+      border-radius: 4px;
+      padding: 4px 10px;
+      cursor: pointer;
+    }
+    .btn-del-no {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 4px 10px;
+      cursor: pointer;
+    }
+    .btn-del-no:hover { color: var(--text); }
+    .del-status { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); }
+    .del-error  { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--fail); }
+
+    /* Fixed-width delete column — prevents layout shift when confirmation appears */
+    .del-col { width: 110px; }
+    .del-cell { white-space: nowrap; }
+
+    /* ── Stats row ───────────────────────────────────── */
+    .stats-row {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 28px;
+    }
+
+    .stat-chip {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 6px 14px;
+    }
+    .stat-chip strong { color: var(--text); font-weight: 700; }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="navbar-inner">
+      <a href="/" class="nav-brand">SIGNAL<span>GRADE</span></a>
+      <div class="auth-user">
+        {{#if user.avatar_url}}
+          <img src="{{user.avatar_url}}" alt="" class="auth-avatar" referrerpolicy="no-referrer" />
+        {{/if}}
+        <a href="/" class="auth-link">New audit</a>
+        <a href="/auth/logout" class="auth-signout">Sign out</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page">
+
+    <div class="page-header">
+      <div>
+        <div class="page-title">Report History</div>
+        <div class="page-subtitle">Your saved audits from SignalGrade</div>
+      </div>
+    </div>
+
+    {{#if hasReports}}
+
+      <div class="stats-row">
+        <div class="stat-chip"><strong>{{reportCount}}</strong> report{{#unless (eq reportCount 1)}}s{{/unless}} saved</div>
+      </div>
+
+      <table class="reports-table">
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>URL</th>
+            <th>Grade</th>
+            <th>Score</th>
+            <th>Date</th>
+            <th>PDF</th>
+            <th class="del-col"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each reports}}
+          <tr data-report-id="{{id}}">
+            <td>
+              <span class="type-badge" style="color:{{typeColor}};border:1px solid {{typeColor}}22;background:{{typeColor}}11;">
+                {{typeLabel}}
+              </span>
+            </td>
+            <td>
+              <div class="report-url" title="{{url}}">{{url}}</div>
+            </td>
+            <td>
+              <span class="report-grade" style="color:{{gradeColor}};">{{grade}}</span>
+            </td>
+            <td>
+              <span class="report-score">{{#if (isDefined score)}}{{score}}/100{{else}}—{{/if}}</span>
+            </td>
+            <td>
+              <span class="report-date">{{dateFormatted}}</span>
+            </td>
+            <td>
+              {{#if pdf_filename}}
+                <a href="/output/{{pdf_filename}}" class="pdf-link" download>↓ PDF</a>
+              {{else}}
+                <span class="no-pdf">—</span>
+              {{/if}}
+            </td>
+            <td class="del-cell">
+              <button class="btn-delete" onclick="startDelete(this)">Delete</button>
+            </td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+
+    {{else}}
+
+      <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <div class="empty-title">No reports yet</div>
+        <div class="empty-body">Run your first audit and it will be saved here automatically.</div>
+        <a href="/" class="btn-new-audit">← Run new audit</a>
+      </div>
+
+    {{/if}}
+
+  </div>
+
+  <script>
+    function startDelete(btn) {
+      btn.closest('td').innerHTML =
+        '<span class="del-confirm">Sure? ' +
+        '<button class="btn-del-yes" onclick="confirmDelete(this)">Yes</button>' +
+        '<button class="btn-del-no" onclick="cancelDelete(this)">No</button>' +
+        '</span>';
+    }
+
+    function confirmDelete(btn) {
+      const tr = btn.closest('tr');
+      const id = tr.dataset.reportId;
+      const td = btn.closest('td');
+      td.innerHTML = '<span class="del-status">Deleting…</span>';
+      fetch('/api/reports/' + id, { method: 'DELETE' })
+        .then(r => r.json())
+        .then(d => {
+          if (d.ok) {
+            tr.remove();
+            const remaining = document.querySelectorAll('.reports-table tbody tr').length;
+            if (remaining === 0) location.reload();
+          } else {
+            td.innerHTML = '<span class="del-error">Error</span>';
+          }
+        })
+        .catch(() => {
+          td.innerHTML = '<span class="del-error">Error</span>';
+        });
+    }
+
+    function cancelDelete(btn) {
+      btn.closest('td').innerHTML = '<button class="btn-delete" onclick="startDelete(this)">Delete</button>';
+    }
+  </script>
+
+</body>
+</html>

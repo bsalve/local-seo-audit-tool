@@ -21,6 +21,8 @@ Audits cover four categories: **Technical** (site health & infrastructure), **Co
 ```
 index.js          # CLI entry — auto-loads audits, scores, outputs report + JSON + PDF
 server.js         # Express server — GET /, POST /audit, GET /crawl (SSE), GET /download, static /output
+                  #   + auth routes (Google OAuth), GET /dashboard, DELETE /api/reports/:id
+knexfile.js       # Knex database config — reads DATABASE_URL from .env
 audits/           # One file per check (auto-discovered via readdirSync)
 public/
   index.html      # Single-page dark UI (Inter body + Space Mono for scores/data, #0b0c0e bg, #4d9fff accent)
@@ -29,8 +31,13 @@ utils/
   score.js        # Shared scoring logic (normalizeScore, calcTotalScore, letterGrade, etc.)
   generatePDF.js  # Handlebars + Puppeteer → /output/signalgrade-report-[domain]-[date].pdf
   crawler.js      # BFS site crawler — crawlSite(), aggregateResults()
+  auth.js         # Passport.js config — Google OAuth strategy, requireAuth middleware
+  db.js           # Knex instance — returns null gracefully if DATABASE_URL not set
+db/
+  migrations/     # Knex migration files — creates users, reports, sessions tables
 templates/
   report.hbs      # Handlebars HTML template for the PDF (dark theme, matches web UI)
+  dashboard.hbs   # Server-rendered report history page (Handlebars, same dark theme)
 output/           # Generated PDFs (gitignored)
 ```
 
@@ -276,7 +283,55 @@ Previously broke this by applying a blue accent change to pass-colored score rea
 
 8. **Stacked bars in site audit had inconsistent widths** — The stacked bar was nested inside the `1fr` middle column div. The `1fr` column width = total width − icon − `auto` counts/score column. Since the `auto` column varies per row (different character counts), `1fr` was different on every row, making bars different widths. Fix: make `.site-stacked-bar` / `.stacked-bar` a **direct child of `.result-row`** with `grid-column: 1 / -1` so it auto-places to a new grid row spanning the full width. Also change `gap` to `column-gap` (row-gap → 0) so the bar sits directly below the content row, spaced only by its own `margin-top`. Applied to both the web UI and the PDF template.
 
+10. **`#checkCount` span removal crashed all page JS** — `document.getElementById('checkCount').textContent = ...` runs at script parse time. Removing the `<span id="checkCount">` from the DOM (e.g. during a navbar refactor) makes this line throw a `TypeError`, crashing the entire `<script>` block and disabling all buttons and event handlers. Fix: guard with `const el = document.getElementById('checkCount'); if (el) el.textContent = ...`. Always use optional access on any `getElementById` call that targets an element that might be conditionally rendered.
+
+11. **Scrollbar shifts `margin: 0 auto` centering across pages** — On Windows, the vertical scrollbar (~17px) reduces the body content area. Pages with a scrollbar center their `max-width` container within a narrower area, shifting content left by ~8px vs. pages without a scrollbar. Fix: `html { scrollbar-gutter: stable; }` on every page. This reserves the scrollbar track width permanently so the centering calculation is identical whether or not the page overflows. Applied to both `index.html` and `dashboard.hbs`.
+
+12. **Navbar wordmark font-weight mismatch between pages** — `dashboard.hbs` had `.nav-brand { font-weight: 700; }` while `index.html` defaulted to 400, making the SIGNALGRADE wordmark appear bolder on the dashboard. Fix: explicitly set `font-weight: 400` on `.nav-brand` in any template that has its own navbar CSS. When adding a navbar to a new page, always cross-check the wordmark weight against `index.html`.
+
+13. **`#results` section used stale `max-width` / `padding` after hero refactor** — When the hero and navbar were refactored to `max-width: 1080px; padding: 0 32px`, the `#results` container still had the old values (`max-width: 1100px; padding: 0 56px 80px`). This caused a subtle rightward shift in the results section relative to the navbar. Fix: grep for old dimension values (`1100px`, `56px`) after any layout-width refactor to catch stale containers.
+
 9. **Crawler did not skip non-HTML files (PDFs, images, etc.)** — The BFS crawler was enqueuing all same-origin links including `.pdf`, `.jpg`, and other binary files. When a PDF was downloaded, `cheerio.load()` spent 20-40 seconds parsing binary data as HTML, and all 64 DOM-based audits ran on garbage DOM. On chipotle.com, pages 27-36 were all PDFs — each took 23-45 seconds instead of under 1 second. Fix: `NON_HTML_EXTENSIONS` set in `crawler.js` filters non-HTML extensions before enqueueing (primary fix) and `fetcher.js` checks `Content-Type` before calling `cheerio.load()` (safety net for extensionless URLs serving binary data). Always filter by extension at enqueue time AND at the top of the crawl loop (defense in depth).
+
+## Auth & Dashboard
+
+**Stack:** express-session + connect-pg-simple (PostgreSQL session store) + Passport.js (Google OAuth 2.0).
+
+**ENV variables required:**
+```
+DATABASE_URL=postgresql://...        # Postgres connection string
+SESSION_SECRET=<64-char hex>         # Random secret — generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+GOOGLE_CLIENT_ID=...                 # From Google Cloud Console → OAuth credentials
+GOOGLE_CLIENT_SECRET=...             # Same
+GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback
+```
+
+**Auth routes:**
+- `GET /auth/google` — initiates OAuth flow (redirects to Google)
+- `GET /auth/google/callback` — OAuth callback; on success redirects to `/dashboard`
+- `GET /auth/logout` — destroys session, redirects to `/`
+- `GET /api/me` — returns `{ user: { id, name, email, avatar_url } }` or `{ user: null }`
+
+**`utils/auth.js`** — exports `{ passport, requireAuth }`. `requireAuth` is an Express middleware that redirects unauthenticated users to `/`. `passport` is the configured Passport instance with the Google strategy. Stores user ID in session; deserializes by DB lookup.
+
+**`utils/db.js`** — exports a Knex instance or `null` if `DATABASE_URL` is not set. All DB calls in `server.js` guard against `null` so the server runs without a database (auth and history disabled, audits still work).
+
+**Database tables** (created by `npm run migrate`):
+- `users` — id, google_id, name, email, avatar_url, created_at
+- `reports` — id, user_id (FK), url, audit_type (page/site/multi), score, grade, pdf_filename, locations (JSON), created_at
+- `sessions` — managed by connect-pg-simple
+
+**`templates/dashboard.hbs`** — server-rendered Handlebars page at `GET /dashboard` (behind `requireAuth`). Shows a sticky navbar matching the homepage (same `max-width: 1080px; padding: 0 32px`, same wordmark style, `scrollbar-gutter: stable`), a table of saved reports (type badge, URL, grade, score, date, PDF download), and per-row delete with inline "Sure? [Yes] [No]" confirmation. `DELETE /api/reports/:id` verifies `user_id` ownership before deleting.
+
+**Report saving** — `saveReport(userId, data)` in `server.js` is fire-and-forget (`.catch` logs errors silently). Called after every page, site, and multi-location audit. No-ops if `db` is null or `userId` is falsy.
+
+**Auth widget in `public/index.html`** — `initAuthWidget()` fetches `/api/me` on page load and populates `#authWidget`:
+- Unauthenticated: `<a href="/auth/google" class="google-btn">Sign in</a>`
+- Authenticated: avatar + Dashboard link + Sign out link
+
+`showSavedNote()` appends a `✓ Saved to your history` line after results render (only when logged in).
+
+**Navbar alignment** — both `index.html` and `dashboard.hbs` use identical navbar structure: sticky `<nav>` with `border-bottom: 1px solid var(--border)` containing an inner div at `max-width: 1080px; margin: 0 auto; padding: 0 32px; height: 56px`. Both pages also set `html { scrollbar-gutter: stable; }` so Windows scrollbar presence doesn't shift `margin: 0 auto` centering.
 
 ## Server Notes
 
@@ -341,13 +396,8 @@ BFS crawler, same-origin only. `crawlSite(startUrl, { maxPages, onProgress })` r
 
 ## To-Do
 
-- **Multi-location Audit (enhancements)** — the core feature is implemented (UI tab, `/multi-audit` endpoint, comparison table, PDF). What's still missing vs. competitors like BrightLocal:
-  - **Location labels** — let users name each location (e.g. "Dallas" / "Houston") instead of showing raw domains
-  - **NAP cross-comparison** — detect if Name, Address, Phone differ across locations (a key multi-location signal)
-  - **Score delta** — show which location improved or regressed since last run
-  - **CSV export** — spreadsheet export of the comparison table for client delivery
-  - The `multi-report.hbs` template hardcodes "68 checks" in the subtitle — update to match the live check count
-- **User Accounts & Report History** — client login system with server-side storage of generated PDF reports. Each account has a dashboard showing past audits (URL, date, grade, PDF download). Prerequisite for monetization: gating features by plan requires knowing who the user is. Stack decisions pending (session-based vs. JWT, DB choice).
+- **Multi-location Audit** ✅ DONE — location labels, NAP cross-comparison with mismatch detection, score delta (localStorage), CSV export, dynamic check count in PDF template. All planned enhancements are implemented.
+- **User Accounts & Report History** ✅ DONE — Google OAuth, PostgreSQL, `/dashboard` with delete, auth widget in homepage navbar.
 - **Monetization** — pricing tiers, payment integration, and feature gating (e.g. higher crawl limits, historical tracking, scheduled audits). Design when feature set is more stable.
 
 ## Global Rules (from ~/.claude/CLAUDE.md)

@@ -123,6 +123,16 @@
     .check-row { break-inside: avoid; }
     .check-row:nth-child(even) td { background: #0d0e10; }
 
+    /* ── NAP table ── */
+    .nap-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    .nap-table th {
+      font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; color: #8892a4;
+      font-weight: 600; padding: 6px 8px; border-bottom: 1px solid #2a2d35; text-align: left;
+    }
+    .nap-table td { font-size: 10px; padding: 6px 8px; border-bottom: 1px solid #1e2025; color: #e4e6ea; }
+    .nap-table td.nap-loc { font-family: 'Space Mono', monospace; font-size: 9px; color: #8892a4; }
+    .nap-mismatch { color: #ff4455; font-weight: 700; }
+
     /* ── Common Issues ── */
     .common-issues { margin-bottom: 20px; }
     .ci-row {
@@ -146,7 +156,7 @@
   <div class="doc-header">
     <div>
       <div class="doc-meta-label">SIGNAL<span>GRADE</span> &nbsp;·&nbsp; MULTI-LOCATION REPORT</div>
-      <div class="doc-subtitle">{{locationCount}} location{{#if locationCountGt1}}s{{/if}} compared &nbsp;·&nbsp; {{locationCount}} × 73 checks</div>
+      <div class="doc-subtitle">{{locationCount}} location{{#if locationCountGt1}}s{{/if}} compared &nbsp;·&nbsp; {{locationCount}} × {{totalCheckCount}} checks</div>
     </div>
     <div class="doc-date">
       <div class="date-label">Audited</div>
@@ -158,7 +168,7 @@
   <div class="loc-cards">
     {{#each locations}}
     <div class="loc-card" style="border-top-color:{{gradeColor}}">
-      <div class="loc-domain">{{domain}}</div>
+      <div class="loc-domain">{{displayName}}</div>
       <div class="loc-grade" style="color:{{gradeColor}}">{{grade}}</div>
       <div class="loc-score" style="color:{{gradeColor}}">{{totalScore}}<span class="loc-score-denom">/100</span></div>
       <div class="loc-meter-track">
@@ -179,13 +189,36 @@
   <div class="bw-row">
     <div class="bw-cell bw-best">
       <div class="bw-label">Highest Score</div>
-      <div class="bw-val">{{bestLocation.domain}} &mdash; {{bestLocation.grade}} ({{bestLocation.totalScore}}/100)</div>
+      <div class="bw-val">{{bestLocation.displayName}} &mdash; {{bestLocation.grade}} ({{bestLocation.totalScore}}/100)</div>
     </div>
     <div class="bw-cell bw-worst">
       <div class="bw-label">Lowest Score</div>
-      <div class="bw-val">{{worstLocation.domain}} &mdash; {{worstLocation.grade}} ({{worstLocation.totalScore}}/100)</div>
+      <div class="bw-val">{{worstLocation.displayName}} &mdash; {{worstLocation.grade}} ({{worstLocation.totalScore}}/100)</div>
     </div>
   </div>
+  {{/if}}
+
+  <!-- NAP Consistency -->
+  {{#if napRows.length}}
+  <div class="section-label">NAP Consistency{{#if napAnyMismatch}} — mismatches detected{{/if}}</div>
+  <table class="nap-table">
+    <thead>
+      <tr>
+        <th>Location</th>
+        <th>Phone</th>
+        <th>Address</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each napRows}}
+      <tr>
+        <td class="nap-loc">{{displayName}}</td>
+        <td{{#if phoneMismatch}} class="nap-mismatch"{{/if}}>{{phone}}</td>
+        <td{{#if addressMismatch}} class="nap-mismatch"{{/if}}>{{address}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
   {{/if}}
 
   <!-- Common Issues -->
@@ -214,7 +247,7 @@
     <thead>
       <tr>
         <th class="th-check">Check</th>
-        {{#each locations}}<th>{{domain}}</th>{{/each}}
+        {{#each locations}}<th>{{displayName}}</th>{{/each}}
       </tr>
     </thead>
     <tbody>

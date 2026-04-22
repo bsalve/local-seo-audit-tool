@@ -25,13 +25,14 @@
     }
 
     html, body { height: 100%; }
+    html { scrollbar-gutter: stable; }
 
     body {
       font-family: 'Inter', sans-serif;
       background: var(--bg);
       color: var(--text);
-      font-size: 13px;
-      line-height: 1.6;
+      font-size: 14px;
+      line-height: 1.5;
       min-height: 100vh;
       overflow-x: hidden;
     }
@@ -50,28 +51,36 @@
        HERO / INPUT
     ═══════════════════════════════ */
     .hero {
-      height: 100vh;
+      min-height: calc(100vh - 56px);
+      height: auto;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       text-align: center;
-      padding: 48px 56px 56px;
-      max-width: 1100px;
+      padding: 0 32px 56px;
+      max-width: 1080px;
       margin: 0 auto;
-      position: relative;
+    }
+
+    .meta-nav {
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+      position: sticky;
+      top: 0;
+      z-index: 10;
     }
 
     .meta-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      position: absolute;
-      top: 48px;
-      left: 56px;
-      right: 56px;
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0 32px;
+      height: 56px;
     }
-    .meta-label { font-size: 11px; letter-spacing: 0.15em; color: var(--muted); text-transform: uppercase; }
+    .meta-label { font-size: 11px; letter-spacing: 0.15em; color: var(--muted); text-transform: uppercase; text-decoration: none; }
     .meta-label span { color: var(--accent); }
     .meta-checks { font-size: 11px; letter-spacing: 0.1em; color: var(--muted); }
     .meta-dot { opacity: 0.4; }
@@ -80,6 +89,47 @@
     .cat-tag.cat-content   { color: #e8a87c; }
     .cat-tag.cat-aeo       { color: #7baeff; }
     .cat-tag.cat-geo       { color: #b07bff; }
+
+    .auth-widget { display: flex; align-items: center; gap: 10px; }
+    .google-btn {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 5px 12px;
+      text-decoration: none;
+      letter-spacing: 0.05em;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .google-btn:hover { color: var(--text); border-color: var(--dim2); }
+    .auth-user { display: flex; align-items: center; gap: 10px; }
+    .auth-avatar { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--border); }
+    .auth-link {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--accent);
+      text-decoration: none;
+      letter-spacing: 0.05em;
+    }
+    .auth-link:hover { text-decoration: underline; }
+    .auth-signout {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      text-decoration: none;
+      letter-spacing: 0.05em;
+    }
+    .auth-signout:hover { color: var(--text); }
+    .saved-note {
+      text-align: center;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--pass);
+      letter-spacing: 0.05em;
+      padding: 10px 0 2px;
+    }
 
     .display-block { padding-top: 0; }
 
@@ -223,8 +273,8 @@
     ═══════════════════════════════ */
     #results {
       display: none;
-      padding: 0 56px 80px;
-      max-width: 1100px;
+      padding: 0 32px 80px;
+      max-width: 1080px;
       margin: 0 auto;
       text-align: center;
       opacity: 0;
@@ -566,19 +616,67 @@
     .site-working-rows { display: none; margin-top: 12px; }
 
     /* ─── Multi-location audit ─── */
-    #multiUrlsWrap { max-width: 720px; margin: 0 auto; }
-    #multiUrls {
-      width: 100%; background: var(--bg2); border: 1px solid var(--dim2);
-      color: var(--text); font-family: 'Space Mono', monospace; font-size: 13px;
-      padding: 14px 20px; outline: none; caret-color: var(--accent);
-      resize: vertical; min-height: 120px; line-height: 1.7;
+    #multiLocRows { max-width: 720px; margin: 0 auto; }
+    .multi-loc-row {
+      display: flex; gap: 8px; margin-bottom: 8px; align-items: center;
     }
-    #multiUrls:focus { border-color: var(--accent); }
-    #multiUrls::placeholder { color: var(--muted); }
+    .multi-loc-label {
+      width: 140px; flex-shrink: 0;
+      background: var(--bg2); border: 1px solid var(--dim2);
+      color: var(--text); font-family: 'Inter', sans-serif; font-size: 12px;
+      padding: 10px 12px; outline: none; caret-color: var(--accent);
+    }
+    .multi-loc-label:focus { border-color: var(--accent); }
+    .multi-loc-label::placeholder { color: var(--muted); }
+    .multi-loc-url {
+      flex: 1;
+      background: var(--bg2); border: 1px solid var(--dim2);
+      color: var(--text); font-family: 'Space Mono', monospace; font-size: 12px;
+      padding: 10px 14px; outline: none; caret-color: var(--accent);
+    }
+    .multi-loc-url:focus { border-color: var(--accent); }
+    .multi-loc-url::placeholder { color: var(--muted); }
+    .multi-loc-remove {
+      background: none; border: 1px solid var(--dim2); color: var(--muted);
+      font-size: 16px; line-height: 1; padding: 8px 10px; cursor: pointer;
+      flex-shrink: 0;
+    }
+    .multi-loc-remove:hover { border-color: var(--fail); color: var(--fail); }
+    #multiAddRowBtn {
+      background: none; border: 1px solid var(--dim2); color: var(--muted);
+      font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.1em;
+      padding: 8px 16px; cursor: pointer; margin-top: 4px;
+    }
+    #multiAddRowBtn:hover { border-color: var(--accent); color: var(--accent); }
     .multi-limit-note {
       font-size: 11px; color: var(--muted); letter-spacing: 0.06em;
       margin-top: 8px; text-align: left;
     }
+    /* Score delta indicators */
+    .score-delta { font-family: 'Space Mono', monospace; font-size: 11px; margin-left: 6px; }
+    .score-delta.up   { color: var(--pass); }
+    .score-delta.down { color: var(--fail); }
+    /* NAP cross-comparison */
+    .nap-section { margin-bottom: 28px; }
+    .nap-cmp-table { border-collapse: collapse; width: 100%; }
+    .nap-cmp-table th {
+      font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
+      font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--dim2); text-align: left;
+    }
+    .nap-cmp-table td { font-size: 12px; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+    .nap-cmp-table td.nap-loc { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); }
+    .nap-cell-mismatch { color: var(--fail); font-weight: 700; }
+    /* Table filter */
+    .multi-table-filter {
+      display: flex; gap: 8px; margin-bottom: 12px; align-items: center;
+    }
+    .multi-filter-btn {
+      background: none; border: 1px solid var(--dim2); color: var(--muted);
+      font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 0.1em;
+      padding: 5px 12px; cursor: pointer;
+    }
+    .multi-filter-btn.active { border-color: var(--accent); color: var(--accent); }
+    .multi-filter-label { font-size: 10px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
 
     /* Multi result cards */
     .multi-loc-cards {
@@ -623,7 +721,7 @@
       color: var(--muted); font-weight: 600;
       padding: 8px 10px; border-bottom: 1px solid var(--dim2);
       background: var(--bg); text-align: center; white-space: nowrap;
-      position: sticky; top: 0; z-index: 1; min-width: 80px;
+      position: sticky; top: 0; z-index: 1; min-width: 160px;
     }
     .multi-cmp-table th.th-check { text-align: left; min-width: 200px; position: sticky; left: 0; z-index: 2; }
     .multi-cmp-table td {
@@ -652,15 +750,17 @@
   </style>
 </head>
 <body>
+<nav class="meta-nav">
+  <div class="meta-row">
+    <a href="/" class="meta-label">SIGNAL<span>GRADE</span></a>
+    <div class="meta-checks"><span class="cat-tag cat-technical">Technical</span> <span class="meta-dot">·</span> <span class="cat-tag cat-content">Content</span> <span class="meta-dot">·</span> <span class="cat-tag cat-aeo">AEO</span> <span class="meta-dot">·</span> <span class="cat-tag cat-geo">GEO</span> <span class="meta-dot">·</span> <span id="checkCount">73</span> CHECKS · PDF OUTPUT</div>
+    <div id="authWidget" class="auth-widget"></div>
+  </div>
+</nav>
 <div id="app">
 
   <!-- HERO -->
   <section class="hero">
-    <div class="meta-row">
-      <div class="meta-label">SIGNAL<span>GRADE</span></div>
-      <div class="meta-checks"><span class="cat-tag cat-technical">Technical</span> <span class="meta-dot">·</span> <span class="cat-tag cat-content">Content</span> <span class="meta-dot">·</span> <span class="cat-tag cat-aeo">AEO</span> <span class="meta-dot">·</span> <span class="cat-tag cat-geo">GEO</span> <span class="meta-dot">·</span> <span id="checkCount">39</span> CHECKS · PDF OUTPUT</div>
-    </div>
-
     <div class="display-block">
       <div class="display-tag">Search Visibility Audit</div>
       <h1 class="display-heading">
@@ -693,9 +793,10 @@
 
         <!-- Multi URL input (Multi mode) -->
         <div id="multiInputWrap" style="display:none">
-          <div class="input-descriptor">Target URLs — one per line</div>
-          <div id="multiUrlsWrap">
-            <textarea id="multiUrls" placeholder="https://location-one.com&#10;https://location-two.com&#10;https://location-three.com" autocomplete="off" spellcheck="false"></textarea>
+          <div class="input-descriptor">Locations — Label (optional) + URL</div>
+          <div id="multiLocRows"></div>
+          <div style="max-width:720px;margin:0 auto;display:flex;justify-content:space-between;align-items:center">
+            <button id="multiAddRowBtn" onclick="addMultiRow()">+ Add location</button>
             <div class="multi-limit-note">Up to 10 locations<span class="tier-badge" style="margin-left:8px">FREE</span></div>
           </div>
           <div class="input-row" style="margin-top:14px">
@@ -841,7 +942,8 @@
     'Calculating score',
     'Generating PDF report',
   ];
-  document.getElementById('checkCount').textContent = STEPS.filter(s => s.startsWith('[')).length;
+  const _cc = document.getElementById('checkCount');
+  if (_cc) _cc.textContent = STEPS.filter(s => s.startsWith('[')).length;
 
   let stepInterval = null, currentStep = 0;
 
@@ -948,6 +1050,7 @@
 
       if (!res.ok) { showError(data.error || 'Audit failed.'); return; }
       renderResults(data);
+      showSavedNote();
       results.style.display = 'block';
       requestAnimationFrame(() => {
         results.scrollIntoView({ behavior: 'smooth' });
@@ -1142,11 +1245,71 @@
   }
 
   /* ── Multi-location audit ── */
+
+  // Dynamic input rows
+  function addMultiRow(url = '', label = '') {
+    const wrap = document.getElementById('multiLocRows');
+    if (wrap.querySelectorAll('.multi-loc-row').length >= 10) return;
+    const row  = document.createElement('div');
+    row.className = 'multi-loc-row';
+    row.innerHTML = `
+      <input type="text" class="multi-loc-label" placeholder="Label (optional)" value="${esc(label)}" autocomplete="off" />
+      <input type="url" class="multi-loc-url" placeholder="https://location.com" value="${esc(url)}" autocomplete="off" spellcheck="false" />
+      <button class="multi-loc-remove" onclick="removeMultiRow(this)" title="Remove">×</button>`;
+    wrap.appendChild(row);
+  }
+
+  function removeMultiRow(btn) {
+    const rows = document.querySelectorAll('.multi-loc-row');
+    if (rows.length <= 1) return; // keep at least one row
+    btn.closest('.multi-loc-row').remove();
+  }
+
+  function getMultiLocations() {
+    return [...document.querySelectorAll('.multi-loc-row')].map(row => ({
+      url:   row.querySelector('.multi-loc-url').value.trim(),
+      label: row.querySelector('.multi-loc-label').value.trim(),
+    })).filter(l => l.url.length > 0);
+  }
+
+  // localStorage history for score delta
+  const MULTI_HISTORY_KEY = 'sg_multi_history';
+
+  function getMultiHistory(locs) {
+    const key = locs.map(l => l.url).sort().join('|');
+    try {
+      const store = JSON.parse(localStorage.getItem(MULTI_HISTORY_KEY) || '{}');
+      return store[key] || null;
+    } catch { return null; }
+  }
+
+  function saveMultiHistory(locations) {
+    const key = locations.map(l => l.url).sort().join('|');
+    try {
+      const store = JSON.parse(localStorage.getItem(MULTI_HISTORY_KEY) || '{}');
+      store[key] = { date: new Date().toISOString(), scores: Object.fromEntries(locations.map(l => [l.url, l.totalScore])) };
+      localStorage.setItem(MULTI_HISTORY_KEY, JSON.stringify(store));
+    } catch {}
+  }
+
   async function runMultiAudit() {
-    const raw = document.getElementById('multiUrls').value;
-    const urls = raw.split('\n').map(s => s.trim()).filter(s => s.length > 0);
-    if (urls.length === 0) { showError('Enter at least one URL.'); return; }
-    if (urls.length > 10) { showError('Maximum 10 URLs allowed.'); return; }
+    const locs = getMultiLocations();
+    if (locs.length === 0) { showError('Enter at least one URL.'); return; }
+    if (locs.length > 10)  { showError('Maximum 10 URLs allowed.'); return; }
+
+    const urls = locs.map(l => l.url.toLowerCase().replace(/\/+$/, ''));
+    const seen = new Set();
+    const dupes = [];
+    for (const u of urls) {
+      if (seen.has(u)) dupes.push(u);
+      else seen.add(u);
+    }
+    if (dupes.length) {
+      showError(`Duplicate URL${dupes.length > 1 ? 's' : ''} detected — each location must be unique: ${dupes.join(', ')}`);
+      return;
+    }
+
+    const prevHistory = getMultiHistory(locs);
 
     clearError();
     document.getElementById('multiAuditBtn').disabled = true;
@@ -1154,14 +1317,13 @@
     resultsSection.style.display = 'none';
     resultsSection.classList.remove('visible');
 
-    showProgressUI();
-    document.getElementById('statusText').textContent = `Auditing ${urls.length} location${urls.length !== 1 ? 's' : ''}...`;
+    startSteps();
 
     try {
       const res  = await fetch('/multi-audit', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ urls }),
+        body:    JSON.stringify({ locations: locs }),
       });
       const data = await res.json();
 
@@ -1171,7 +1333,9 @@
       stopSteps();
 
       if (!res.ok) { showError(data.error || 'Audit failed.'); return; }
-      renderMultiResults(data);
+      renderMultiResults(data, prevHistory);
+      saveMultiHistory(data.locations.filter(l => !l.error));
+      showSavedNote();
       resultsSection.style.display = 'block';
       requestAnimationFrame(() => {
         resultsSection.scrollIntoView({ behavior: 'smooth' });
@@ -1185,7 +1349,98 @@
     }
   }
 
-  function renderMultiResults({ locations, pdfFile }) {
+  // Display name: label if set, otherwise domain
+  function multiDisplayName(loc) {
+    return (loc.label && loc.label.trim()) ? loc.label.trim() : toDomain(loc.url);
+  }
+
+  function renderNapSection(locations) {
+    const successLocs = locations.filter(l => !l.error && l.nap);
+    if (!successLocs.length) return '';
+
+    const rows = successLocs.map(loc => ({
+      label:   multiDisplayName(loc),
+      phone:   loc.nap.phone   || '—',
+      address: loc.nap.address || '—',
+    }));
+
+    const phones    = rows.map(r => r.phone).filter(v => v !== '—');
+    const addresses = rows.map(r => r.address).filter(v => v !== '—');
+    const phoneMismatch   = new Set(phones).size > 1;
+    const addressMismatch = new Set(addresses).size > 1;
+    if (!phoneMismatch && !addressMismatch && phones.length === 0 && addresses.length === 0) return '';
+
+    const majorityOf = (arr) => arr.length ? arr.sort((a, b) => arr.filter(v => v === b).length - arr.filter(v => v === a).length)[0] : null;
+    const majPhone   = majorityOf(phones);
+    const majAddress = majorityOf(addresses);
+
+    const headerNote = (phoneMismatch || addressMismatch) ? ' <span style="color:var(--fail);font-size:10px">— mismatches detected</span>' : '';
+    let html = `<div class="nap-section">
+      <div class="detail-label in">NAP Consistency${headerNote}</div>
+      <table class="nap-cmp-table">
+        <thead><tr><th>Location</th><th>Phone</th><th>Address</th></tr></thead>
+        <tbody>`;
+    for (const row of rows) {
+      const pMismatch = phoneMismatch   && row.phone   !== '—' && row.phone   !== majPhone;
+      const aMismatch = addressMismatch && row.address !== '—' && row.address !== majAddress;
+      html += `<tr>
+        <td class="nap-loc">${esc(row.label)}</td>
+        <td${pMismatch ? ' class="nap-cell-mismatch"' : ''}>${esc(row.phone)}</td>
+        <td${aMismatch ? ' class="nap-cell-mismatch"' : ''}>${esc(row.address)}</td>
+      </tr>`;
+    }
+    html += `</tbody></table></div>`;
+    return html;
+  }
+
+  // CSV export
+  function exportMultiCSV(locations, sortedNames) {
+    const headers = ['Check', 'Category', ...locations.map(loc => multiDisplayName(loc))];
+    const rows = sortedNames.map(name => {
+      const cat = resultCategory(name);
+      const displayName = name.replace(/^\[(Technical|Content|AEO|GEO)\]\s*/, '');
+      const statuses = locations.map(loc => {
+        if (loc.error) return 'error';
+        const r = (loc.results || []).find(x => x.name === name);
+        return r ? r.status : 'n/a';
+      });
+      return [displayName, CAT_LABELS[cat].short, ...statuses];
+    });
+    const csv = [headers, ...rows].map(row =>
+      row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+    ).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = 'signalgrade-multi-comparison.csv'; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // Table filter
+  let _multiFilter = 'all';
+  let _multiSortedNames = [];
+  let _multiLocations   = [];
+  function filterMultiTable(filter) {
+    _multiFilter = filter;
+    document.querySelectorAll('.multi-filter-btn').forEach(b => b.classList.toggle('active', b.dataset.filter === filter));
+    const tbody = document.getElementById('multiCmpTbody');
+    if (!tbody) return;
+    const rows  = tbody.querySelectorAll('tr.multi-data-row');
+    rows.forEach(row => {
+      if (filter === 'all') { row.style.display = ''; return; }
+      const statuses = [...row.querySelectorAll('.multi-cell-icon')].map(el => {
+        if (el.classList.contains('pass')) return 'pass';
+        if (el.classList.contains('warn')) return 'warn';
+        if (el.classList.contains('fail')) return 'fail';
+        return 'na';
+      });
+      const hasFail = statuses.includes('fail');
+      const hasWarn = statuses.includes('warn');
+      row.style.display = (filter === 'fails' && hasFail) || (filter === 'warns' && !hasFail && hasWarn) ? '' : 'none';
+    });
+  }
+
+  function renderMultiResults({ locations, pdfFile }, prevHistory) {
     const CAT_ORDER = ['[Technical]', '[Content]', '[AEO]', '[GEO]'];
 
     // Collect all unique check names in category order
@@ -1199,6 +1454,8 @@
       if (ia !== ib) return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
       return a.localeCompare(b);
     });
+    _multiSortedNames = sortedNames;
+    _multiLocations   = locations;
 
     // Per-location category averages
     function catAvg(loc, prefix) {
@@ -1211,19 +1468,27 @@
     // Location cards
     let cardsHtml = `<div class="multi-loc-cards">`;
     for (const loc of locations) {
-      const color = loc.error ? 'var(--muted)' : gradeColor(loc.totalScore);
-      const grade = loc.error ? '—' : loc.grade;
-      const score = loc.error ? '—' : loc.totalScore;
-      const domain = toDomain(loc.url);
+      const color     = loc.error ? 'var(--muted)' : gradeColor(loc.totalScore);
+      const grade     = loc.error ? '—' : loc.grade;
+      const score     = loc.error ? '—' : loc.totalScore;
+      const dispName  = multiDisplayName(loc);
       const technical = catAvg(loc, '[Technical]');
       const content   = catAvg(loc, '[Content]');
       const aeo       = catAvg(loc, '[AEO]');
       const geo       = catAvg(loc, '[GEO]');
+      let deltaHtml = '';
+      if (!loc.error && prevHistory && prevHistory.scores) {
+        const prev = prevHistory.scores[loc.url];
+        if (prev != null && prev !== loc.totalScore) {
+          const diff = loc.totalScore - prev;
+          deltaHtml = `<span class="score-delta ${diff > 0 ? 'up' : 'down'}">${diff > 0 ? '↑' : '↓'}${Math.abs(diff)}</span>`;
+        }
+      }
       cardsHtml += `
         <div class="multi-loc-card" style="border-top-color:${color}">
-          <div class="multi-loc-domain">${esc(domain)}</div>
+          <div class="multi-loc-domain">${esc(dispName)}</div>
           <div class="multi-loc-grade" style="color:${color}">${grade}</div>
-          <div class="multi-loc-score" style="color:${color}">${score}${!loc.error ? '<span class="multi-loc-denom">/100</span>' : ''}</div>
+          <div class="multi-loc-score" style="color:${color}">${score}${!loc.error ? `<span class="multi-loc-denom">/100</span>${deltaHtml}` : ''}</div>
           ${!loc.error ? `<div class="multi-loc-meter"><div class="multi-loc-meter-fill" style="width:${score}%;background:${color}"></div></div>` : ''}
           ${!loc.error ? `
           <div class="multi-loc-cats">
@@ -1236,14 +1501,19 @@
     }
     cardsHtml += `</div>`;
 
-    // PDF download
-    const pdfHtml = pdfFile ? `
-      <div style="text-align:center;margin-bottom:32px">
-        <a class="pdf-link in" href="/output/${esc(pdfFile)}" download>
-          <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-          Download Comparison PDF
-        </a>
-      </div>` : '';
+    // Downloads row (PDF + CSV)
+    const csvBtn = `<button class="pdf-link in" style="background:none;cursor:pointer" onclick="exportMultiCSV(_multiLocations,_multiSortedNames)">
+      <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+      Download CSV
+    </button>`;
+    const pdfBtn = pdfFile ? `<a class="pdf-link in" href="/output/${esc(pdfFile)}" download>
+      <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+      Download Comparison PDF
+    </a>` : '';
+    const downloadsHtml = (pdfBtn || csvBtn) ? `<div style="display:flex;gap:16px;justify-content:center;margin-bottom:32px">${pdfBtn}${csvBtn}</div>` : '';
+
+    // NAP cross-comparison section
+    const napHtml = renderNapSection(locations);
 
     // Common issues: checks failing at the most locations, ranked
     const CAT_COLORS_UI = { technical: '#8892a4', content: '#e8a87c', aeo: '#7baeff', geo: '#b07bff' };
@@ -1254,20 +1524,20 @@
         return { name, failCount, warnCount };
       })
       .filter(c => c.failCount > 0)
-      .sort((a, b) => b.failCount - a.failCount || b.warnCount - a.warnCount);
+      .sort((a, b) => b.failCount - a.failCount || b.warnCount - a.warnCount)
+      .slice(0, 7);
 
     let commonIssuesHtml = '';
     if (commonIssues.length) {
       commonIssuesHtml = `<div class="detail-label in">Common Issues</div><div class="result-rows in">`;
       for (const issue of commonIssues) {
         const cat = resultCategory(issue.name);
-        const catColor = CAT_COLORS_UI[cat];
-        const displayName = issue.name.replace(/^\[(Technical|Content|AEO|GEO)\]\s*/, '');
+        const dispName = issue.name.replace(/^\[(Technical|Content|AEO|GEO)\]\s*/, '');
         commonIssuesHtml += `
           <div class="result-row">
             <div class="row-status fail">${statusIcon('fail')}</div>
             <div>
-              <div class="row-name">${esc(displayName)}</div>
+              <div class="row-name">${esc(dispName)}</div>
               <div class="site-issue-cat cat-${cat}">${CAT_LABELS[cat].short}</div>
             </div>
             <div class="site-issue-counts">
@@ -1279,10 +1549,17 @@
       commonIssuesHtml += `</div>`;
     }
 
-    // Comparison table
-    const colHeaders = locations.map(loc => `<th>${esc(toDomain(loc.url))}</th>`).join('');
+    // Comparison table with filter buttons
+    _multiFilter = 'all';
+    const colHeaders = locations.map(loc => `<th>${esc(multiDisplayName(loc))}</th>`).join('');
     let tableHtml = `
       <div class="detail-label in">Check Comparison</div>
+      <div class="multi-table-filter">
+        <span class="multi-filter-label">Show:</span>
+        <button class="multi-filter-btn active" data-filter="all"   onclick="filterMultiTable('all')">All</button>
+        <button class="multi-filter-btn"         data-filter="fails" onclick="filterMultiTable('fails')">Fails</button>
+        <button class="multi-filter-btn"         data-filter="warns" onclick="filterMultiTable('warns')">Warns</button>
+      </div>
       <div class="multi-cmp-wrap">
         <table class="multi-cmp-table">
           <thead>
@@ -1291,7 +1568,7 @@
               ${colHeaders}
             </tr>
           </thead>
-          <tbody>`;
+          <tbody id="multiCmpTbody">`;
 
     let lastCat = null;
     for (const name of sortedNames) {
@@ -1301,7 +1578,7 @@
         tableHtml += `<tr class="multi-cmp-cat-row cat-${cat}"><td colspan="${colSpan}">${CAT_LABELS[cat].short} — ${CAT_LABELS[cat].full}</td></tr>`;
         lastCat = cat;
       }
-      const displayName = name.replace(/^\[(Technical|Content|AEO|GEO)\]\s*/, '');
+      const dispName = name.replace(/^\[(Technical|Content|AEO|GEO)\]\s*/, '');
       const cells = locations.map(loc => {
         if (loc.error) return `<td class="td-loc"><span class="multi-cell-icon" style="color:var(--muted)">—</span></td>`;
         const r = (loc.results || []).find(x => x.name === name);
@@ -1313,7 +1590,7 @@
           ${hasScore ? `<div class="multi-cell-score">${r.normalizedScore}</div>` : ''}
         </td>`;
       }).join('');
-      tableHtml += `<tr><td class="td-check">${esc(displayName)}</td>${cells}</tr>`;
+      tableHtml += `<tr class="multi-data-row"><td class="td-check">${esc(dispName)}</td>${cells}</tr>`;
     }
 
     tableHtml += `</tbody></table></div>`;
@@ -1324,7 +1601,8 @@
           <strong>${locations.length} location${locations.length !== 1 ? 's' : ''} audited</strong>
         </div>
         ${cardsHtml}
-        ${pdfHtml}
+        ${downloadsHtml}
+        ${napHtml}
         ${commonIssuesHtml}
         ${tableHtml}
       </div>`;
@@ -1355,6 +1633,7 @@
           document.getElementById('statusLine').style.display = 'none';
           document.getElementById('progressTrack').style.display = 'none';
           renderSiteResults({ ...evt, siteUrl: url });
+          showSavedNote();
           resultsSection.style.display = 'block';
           requestAnimationFrame(() => {
             resultsSection.scrollIntoView({ behavior: 'smooth' });
@@ -1574,11 +1853,49 @@
     btn.textContent  = open ? '+ recommendation' : '− recommendation';
   }
 
+  /* ── Auth widget ── */
+  let _currentUser = null;
+
+  async function initAuthWidget() {
+    try {
+      const res = await fetch('/api/me');
+      const { user } = await res.json();
+      _currentUser = user;
+      const widget = document.getElementById('authWidget');
+      if (!widget) return;
+      if (user) {
+        widget.innerHTML =
+          `<div class="auth-user">` +
+          (user.avatar_url ? `<img class="auth-avatar" src="${esc(user.avatar_url)}" referrerpolicy="no-referrer" alt="" />` : '') +
+          `<a href="/dashboard" class="auth-link">Dashboard</a>` +
+          `<a href="/auth/logout" class="auth-signout">Sign out</a>` +
+          `</div>`;
+      } else {
+        widget.innerHTML = `<a href="/auth/google" class="google-btn">Sign in</a>`;
+      }
+    } catch (_) {}
+  }
+
+  function showSavedNote() {
+    if (!_currentUser) return;
+    const inner = document.getElementById('resultsInner');
+    if (!inner) return;
+    const note = document.createElement('div');
+    note.className = 'saved-note';
+    note.textContent = '✓ Saved to your history';
+    inner.appendChild(note);
+  }
+
+  initAuthWidget();
+
   document.getElementById('urlInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') runAudit();
   });
   document.getElementById('auditBtn').addEventListener('click', runAudit);
   document.getElementById('multiAuditBtn').addEventListener('click', runMultiAudit);
+
+  // Initialize multi input with one empty row
+  addMultiRow();
 </script>
 </body>
 </html>

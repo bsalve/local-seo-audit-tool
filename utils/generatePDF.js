@@ -194,21 +194,25 @@ async function generateMultiPDF(locations, options = {}) {
 
   // Enrich each location with display data
   const processedLocations = locations.map(loc => {
-    const grouped   = groupResults(loc.results);
-    const catScores = {
+    const grouped      = groupResults(loc.results);
+    const catScores    = {
       technical: calcCatScore(grouped.technicalResults),
       content:   calcCatScore(grouped.contentResults),
       aeo:       calcCatScore(grouped.aeoResults),
       geo:       calcCatScore(grouped.geoResults),
     };
+    const domain      = shortDomain(loc.url);
+    const displayName = (loc.label && loc.label.trim()) ? loc.label.trim() : domain;
     return {
-      url:        loc.url,
-      domain:     shortDomain(loc.url),
-      grade:      loc.grade,
-      totalScore: loc.totalScore,
-      gradeColor: gradeColorForScore(loc.totalScore),
+      url:         loc.url,
+      domain,
+      displayName,
+      grade:       loc.grade,
+      totalScore:  loc.totalScore,
+      gradeColor:  gradeColorForScore(loc.totalScore),
       catScores,
-      results:    loc.results,
+      results:     loc.results,
+      nap:         loc.nap || { phone: null, address: null },
     };
   });
 
@@ -248,9 +252,31 @@ async function generateMultiPDF(locations, options = {}) {
   }
 
   // Best / worst locations by score
-  const ranked       = [...processedLocations].sort((a, b) => b.totalScore - a.totalScore);
-  const bestLocation = ranked[0];
+  const ranked        = [...processedLocations].sort((a, b) => b.totalScore - a.totalScore);
+  const bestLocation  = ranked[0];
   const worstLocation = ranked.length > 1 ? ranked[ranked.length - 1] : null;
+
+  // NAP cross-comparison: build rows and flag mismatches
+  const napRows = processedLocations.map(loc => ({
+    displayName: loc.displayName,
+    phone:       loc.nap.phone   || '—',
+    address:     loc.nap.address || '—',
+  }));
+  const napPhones    = napRows.map(r => r.phone).filter(v => v !== '—');
+  const napAddresses = napRows.map(r => r.address).filter(v => v !== '—');
+  const napMismatch  = {
+    phone:   new Set(napPhones).size > 1,
+    address: new Set(napAddresses).size > 1,
+  };
+  // Per-row mismatch flags for template cell coloring
+  const majorityPhone   = napPhones.length   ? napPhones.sort((a, b) =>
+    napPhones.filter(v => v === b).length - napPhones.filter(v => v === a).length)[0]   : null;
+  const majorityAddress = napAddresses.length ? napAddresses.sort((a, b) =>
+    napAddresses.filter(v => v === b).length - napAddresses.filter(v => v === a).length)[0] : null;
+  for (const row of napRows) {
+    row.phoneMismatch   = napMismatch.phone   && row.phone   !== '—' && row.phone   !== majorityPhone;
+    row.addressMismatch = napMismatch.address && row.address !== '—' && row.address !== majorityAddress;
+  }
 
   // Common issues: checks failing at the most locations, top 7
   const CAT_COLORS = { technical: '#8892a4', content: '#e8a87c', aeo: '#7baeff', geo: '#b07bff' };
@@ -279,6 +305,7 @@ async function generateMultiPDF(locations, options = {}) {
     auditedAt,
     locationCount:    n,
     locationCountGt1: n > 1,
+    totalCheckCount:  sortedNames.length,
     tableColSpan:     n + 1,
     checkColWidth,
     locations:        processedLocations,
@@ -286,6 +313,8 @@ async function generateMultiPDF(locations, options = {}) {
     bestLocation,
     worstLocation,
     top7CommonIssues,
+    napRows,
+    napAnyMismatch: napMismatch.phone || napMismatch.address,
   });
 
   const datePart = new Date().toISOString().slice(0, 10);

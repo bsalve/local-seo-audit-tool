@@ -17,7 +17,7 @@ async function run() {
     const auditFns = auditPaths.map(p => require(p));
 
     const results = (await Promise.all(
-      auditFns.map(fn => Promise.resolve(fn($, html, url, meta)).catch(() => null))
+      auditFns.map(fn => new Promise(resolve => resolve(fn($, html, url, meta))).catch(() => null))
     )).flat().filter(Boolean);
 
     // Ensure results are plain serializable objects before postMessage

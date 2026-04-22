@@ -160,15 +160,18 @@ async function checkPageSpeed($, html, url) {
         category: ['performance', 'seo'],
         ...(process.env.PAGESPEED_API_KEY && { key: process.env.PAGESPEED_API_KEY }),
       },
-      timeout: 30000,
+      timeout: 60000,
     });
   } catch (err) {
     const status = err.response?.status;
+    const isTimeout = !status && err.code === 'ECONNABORTED';
     const hint =
       status === 429
         ? 'The PageSpeed Insights API rate limit was hit. Wait a minute and try again, or add an API key via the PAGESPEED_API_KEY environment variable.'
         : status === 400
         ? 'The URL was rejected by the PageSpeed Insights API. Ensure it is publicly reachable (not localhost or behind a login).'
+        : isTimeout
+        ? 'PageSpeed Insights could not analyze this site within the time limit. This usually means the site blocks automated analysis tools (including Google\'s own Lighthouse crawler). Try auditing a different URL.'
         : `Network error contacting PageSpeed Insights API: ${err.message}`;
 
     const errorResult = {

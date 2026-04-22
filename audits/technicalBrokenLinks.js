@@ -64,7 +64,7 @@ module.exports = async function checkBrokenLinks($, html, url) {
           timeout: REQUEST_TIMEOUT,
           maxRedirects: 5,
           validateStatus: () => true, // don't throw on 4xx/5xx
-          headers: { 'User-Agent': 'LocalSEOAuditBot/1.0' },
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' },
         });
         return { link, status: res.status, broken: res.status >= 400 };
       } catch {

@@ -36,7 +36,7 @@ module.exports = async function checkFavicon($, html, url) {
     const res = await axios.head(`${origin}/favicon.ico`, {
       timeout: 5000,
       validateStatus: () => true,
-      headers: { 'User-Agent': 'LocalSEOAuditBot/1.0' },
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' },
     });
 
     if (res.status === 200) {

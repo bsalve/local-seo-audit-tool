@@ -14,7 +14,7 @@ module.exports = async function checkRedirectChain($, html, url) {
         maxRedirects: 0,
         validateStatus: () => true,
         timeout: TIMEOUT,
-        headers: { 'User-Agent': 'LocalSEOAuditBot/1.0' },
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' },
       });
 
       chain.push({ url: current, status: res.status });

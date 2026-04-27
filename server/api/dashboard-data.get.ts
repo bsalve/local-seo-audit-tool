@@ -23,6 +23,7 @@ export default defineEventHandler(async (event) => {
 
   const rawReports = await db('reports')
     .where({ user_id: user.id })
+    .whereNull('deleted_at')
     .orderBy('created_at', 'desc')
     .limit(100)
 

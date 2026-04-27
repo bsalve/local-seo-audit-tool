@@ -38,6 +38,7 @@ const SKIP_AUDITS = new Set([
   'geoAICrawlerAccess.js',       // Fetches /robots.txt — same result for every page
   'technicalSitemapValidation.js', // HEADs sitemap URLs — too slow per-page + domain-level
   'technicalCrawlDelay.js',        // Fetches /robots.txt — same result for every page
+  'geoAIPresence.js',              // Perplexity API call — slow + domain-level result
 ]);
 
 // ---------------------------------------------------------------------------

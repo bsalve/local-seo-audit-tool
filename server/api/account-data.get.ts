@@ -26,6 +26,7 @@ export default defineEventHandler(async (event) => {
       crawlLimit: tier.crawlPageLimit, multiLimit: tier.multiAuditLimit, rateLimit: tier.rateLimit.max,
       isPro: plan === 'pro', isAgency: plan === 'agency', isFree: plan === 'free',
       hasBilling: false, stripeAvailable: !!process.env.STRIPE_PRO_PRICE_ID,
+      totalReports: 0, monthlyReports: 0, pdfLogoUrl: null,
     }
   }
 
@@ -33,6 +34,11 @@ export default defineEventHandler(async (event) => {
   const plan = user?.plan || 'free'
   const tier = TIERS[plan] || TIERS.free
   const planMeta = PLAN_LABELS[plan] || PLAN_LABELS.free
+
+  const now        = new Date()
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+  const [{ count: totalReports }]   = await db('reports').where({ user_id: sessionUser.id }).whereNull('deleted_at').count('id as count')
+  const [{ count: monthlyReports }] = await db('reports').where({ user_id: sessionUser.id }).where('created_at', '>=', monthStart).count('id as count')
 
   return {
     user, plan,
@@ -47,5 +53,8 @@ export default defineEventHandler(async (event) => {
     isFree:     plan === 'free',
     hasBilling: !!(user?.stripe_customer_id && process.env.STRIPE_SECRET_KEY),
     stripeAvailable: !!process.env.STRIPE_PRO_PRICE_ID,
+    totalReports:   Number(totalReports),
+    monthlyReports: Number(monthlyReports),
+    pdfLogoUrl: user?.pdf_logo_url || null,
   }
 })

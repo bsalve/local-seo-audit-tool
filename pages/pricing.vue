@@ -22,6 +22,7 @@ onMounted(async () => {
     <AppNav>
       <AppNavAuth>
         <a href="/pricing" class="nav-link nav-link-current">Pricing</a>
+        <a href="/docs" class="nav-link">API Docs</a>
         <a href="/dashboard" class="nav-link">Dashboard</a>
         <a href="/account" class="nav-link">Account</a>
       </AppNavAuth>

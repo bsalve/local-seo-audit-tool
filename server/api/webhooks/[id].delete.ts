@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
   if (!db) throw createError({ statusCode: 503, message: 'Database not available' })
 
   const id = getRouterParam(event, 'id')
-  const updated = await db('reports').where({ id, user_id: user.id, deleted_at: null }).update({ deleted_at: new Date() })
-  if (!updated) throw createError({ statusCode: 404, message: 'Report not found' })
+  const deleted = await db('webhooks').where({ id, user_id: user.id }).delete()
+  if (!deleted) throw createError({ statusCode: 404, message: 'Webhook not found' })
   return { ok: true }
 })

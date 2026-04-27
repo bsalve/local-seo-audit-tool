@@ -27,14 +27,15 @@ function fetchErrorMessage(errorCode: string, url: string): string {
 }
 
 export default defineEventHandler(async (event) => {
-  const { fetchPage }   = _require(join(process.cwd(), 'utils/fetcher.js'))
+  const { fetchPage, fetchPageWithJS } = _require(join(process.cwd(), 'utils/fetcher.js'))
   const { calcTotalScore, letterGrade, buildJsonOutput } = _require(join(process.cwd(), 'utils/score.js'))
   const { generatePDF } = _require(join(process.cwd(), 'utils/generatePDF.js'))
   const db              = _require(join(process.cwd(), 'utils/db.js'))
   const email           = _require(join(process.cwd(), 'utils/email.js'))
+  const { dispatchWebhooks } = _require(join(process.cwd(), 'utils/webhooks.js'))
 
   const body = await readBody(event)
-  const { url, logoUrl } = body ?? {}
+  const { url, logoUrl, jsRender } = body ?? {}
   if (!url) throw createError({ statusCode: 400, message: 'url is required' })
 
   let safeLogoUrl: string | null = null
@@ -47,10 +48,23 @@ export default defineEventHandler(async (event) => {
 
   const audits: any[] = useNitroApp().audits ?? []
 
+  // Fall back to stored pdf_logo_url if no logo provided in request
+  const userId = event.context.userId ?? null
+  if (!safeLogoUrl && userId && db) {
+    try {
+      const dbUser = await db('users').where({ id: userId }).first()
+      if (dbUser?.pdf_logo_url) safeLogoUrl = dbUser.pdf_logo_url
+    } catch {}
+  }
+
   const r2 = _require(join(process.cwd(), 'utils/r2.js'))
 
   try {
-    const { html, $, headers, finalUrl, responseTimeMs } = await fetchPage(url)
+    const plan = event.context.plan ?? 'anon'
+    const useJsRender = jsRender === true && (plan === 'pro' || plan === 'agency')
+    const { html, $, headers, finalUrl, responseTimeMs } = useJsRender
+      ? await fetchPageWithJS(url, parseInt(process.env.JS_RENDER_TIMEOUT ?? '15000'))
+      : await fetchPage(url)
     const meta = { headers, finalUrl, responseTimeMs }
     const results = (
       await Promise.all(audits.map((a) => new Promise((resolve) => resolve(a($, html, url, meta))).catch(() => null)))
@@ -62,7 +76,6 @@ export default defineEventHandler(async (event) => {
     const pdfPath = await generatePDF(jsonOutput, { logoUrl: safeLogoUrl })
     const pdfFile = basename(pdfPath)
 
-    const userId = event.context.userId ?? null
     let r2Key: string | null = null
     if (r2.isConfigured() && userId) {
       try {
@@ -99,6 +112,8 @@ export default defineEventHandler(async (event) => {
         }
       }
     }
+
+    if (userId) dispatchWebhooks(userId, 'audit.complete', { url, score, grade, pdfFile }).catch(() => {})
 
     return { ...jsonOutput, pdfFile }
   } catch (err: any) {

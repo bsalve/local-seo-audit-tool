@@ -97,40 +97,40 @@ function buildCharts() {
   }
 }
 
-async function confirmDelete(reportId, tr, td) {
-  td.innerHTML = '<span class="del-status">Deleting…</span>'
+const deletingId = ref(null)
+const deletingConfirmed = ref(null)
+
+async function confirmDeleteReport(reportId) {
+  deletingConfirmed.value = reportId
+  deletingId.value = null
   try {
     const res = await $fetch(`/api/reports/${reportId}`, { method: 'DELETE' })
     if (res.ok) {
-      tr.remove()
-      if (document.querySelectorAll('.reports-table tbody tr').length === 0) {
-        location.reload()
-      }
-    } else {
-      td.innerHTML = '<span class="del-error">Error</span>'
+      dashData.value.reports = dashData.value.reports.filter(r => r.id !== reportId)
     }
-  } catch {
-    td.innerHTML = '<span class="del-error">Error</span>'
-  }
+  } catch {}
+  deletingConfirmed.value = null
 }
 
-function startDelete(event) {
-  const btn = event.currentTarget
-  const td = btn.closest('td')
-  const tr = btn.closest('tr')
-  const reportId = tr.dataset.reportId
+// Share state
+const sharingId  = ref(null)
+const copiedId   = ref(null)
+const shareError = ref('')
 
-  td.innerHTML = `
-    <span class="del-confirm">Sure?
-      <button class="btn-del-yes" data-id="${reportId}">Yes</button>
-      <button class="btn-del-no">No</button>
-    </span>`
-
-  td.querySelector('.btn-del-yes').addEventListener('click', () => confirmDelete(reportId, tr, td))
-  td.querySelector('.btn-del-no').addEventListener('click', () => {
-    td.innerHTML = '<button class="btn-delete">Delete</button>'
-    td.querySelector('.btn-delete').addEventListener('click', startDelete)
-  })
+async function shareReport(reportId) {
+  sharingId.value = reportId
+  shareError.value = ''
+  try {
+    const res = await $fetch(`/api/reports/${reportId}/share`, { method: 'POST' })
+    const absoluteUrl = window.location.origin + res.shareUrl
+    await navigator.clipboard.writeText(absoluteUrl)
+    copiedId.value = reportId
+    setTimeout(() => { if (copiedId.value === reportId) copiedId.value = null }, 2500)
+  } catch (e) {
+    shareError.value = e.data?.message || 'Failed to generate share link.'
+  } finally {
+    sharingId.value = null
+  }
 }
 
 // Scheduled audits
@@ -194,7 +194,6 @@ onMounted(async () => {
   }
   await loadSchedules()
   await nextTick()
-  document.querySelectorAll('.btn-delete').forEach(btn => btn.addEventListener('click', startDelete))
   // Wait for Chart.js CDN script to load then build charts
   if (trendGroups.value.length > 0) {
     const waitForChart = (attempts) => {
@@ -211,6 +210,7 @@ onMounted(async () => {
     <AppNav>
       <AppNavAuth>
         <a href="/pricing" class="nav-link">Pricing</a>
+        <a href="/docs" class="nav-link">API Docs</a>
         <a href="/dashboard" class="nav-link nav-link-current">Dashboard</a>
         <a href="/account" class="nav-link">Account</a>
       </AppNavAuth>
@@ -291,6 +291,7 @@ onMounted(async () => {
               <th>Score</th>
               <th>Date</th>
               <th>PDF</th>
+              <th>Share</th>
               <th class="del-col"></th>
             </tr>
           </thead>
@@ -320,8 +321,23 @@ onMounted(async () => {
                   Download PDF
                 </a>
               </td>
+              <td>
+                <button
+                  class="btn-share"
+                  :disabled="sharingId === report.id"
+                  @click="shareReport(report.id)"
+                >{{ sharingId === report.id ? '…' : copiedId === report.id ? 'Copied!' : 'Share' }}</button>
+              </td>
               <td class="del-cell">
-                <button class="btn-delete" @click="startDelete">Delete</button>
+                <span v-if="deletingConfirmed === report.id" class="del-status">Deleting…</span>
+                <span v-else-if="deletingId === report.id" class="del-confirm">
+                  <span>Sure?</span>
+                  <span class="del-confirm-btns">
+                    <button class="btn-del-yes" @click="confirmDeleteReport(report.id)">Yes</button>
+                    <button class="btn-del-no" @click="deletingId = null">No</button>
+                  </span>
+                </span>
+                <button v-else class="btn-delete" @click="deletingId = report.id">Delete</button>
               </td>
             </tr>
           </tbody>
@@ -432,12 +448,17 @@ body {
 .report-date { font-size: 12px; color: var(--muted); white-space: nowrap; }
 .no-pdf { font-size: 12px; color: var(--dim2); }
 
+.btn-share { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--accent); background: none; border: 1px solid var(--accent); border-radius: 4px; padding: 4px 10px; cursor: pointer; letter-spacing: 0.04em; transition: color 0.15s, border-color 0.15s, background 0.15s; white-space: nowrap; }
+.btn-share:hover { background: rgba(77,159,255,0.08); }
+.btn-share:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-delete { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); background: none; border: 1px solid var(--border); border-radius: 4px; padding: 4px 10px; cursor: pointer; letter-spacing: 0.04em; transition: color 0.15s, border-color 0.15s; }
 .btn-delete:hover { color: var(--fail); border-color: var(--fail); }
-.del-confirm { display: flex; align-items: center; gap: 6px; font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); white-space: nowrap; }
-.btn-del-yes { font-family: 'Space Mono', monospace; font-size: 10px; color: #fff; background: var(--fail); border: none; border-radius: 4px; padding: 4px 10px; cursor: pointer; }
-.btn-del-no { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); background: none; border: 1px solid var(--border); border-radius: 4px; padding: 4px 10px; cursor: pointer; }
-.btn-del-no:hover { color: var(--text); }
+.del-confirm { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 0.04em; }
+.del-confirm-btns { display: flex; gap: 6px; }
+.btn-del-yes { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--fail); background: none; border: 1px solid rgba(255,68,85,0.4); border-radius: 4px; padding: 2px 10px; cursor: pointer; letter-spacing: 0.04em; transition: background 0.15s, border-color 0.15s; }
+.btn-del-yes:hover { background: rgba(255,68,85,0.1); border-color: var(--fail); }
+.btn-del-no { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); background: none; border: 1px solid var(--border); border-radius: 4px; padding: 2px 10px; cursor: pointer; letter-spacing: 0.04em; transition: color 0.15s, border-color 0.15s; }
+.btn-del-no:hover { color: var(--text); border-color: var(--dim2); }
 .del-status { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); }
 .del-error { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--fail); }
 .del-col { width: 110px; }

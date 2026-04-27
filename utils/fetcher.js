@@ -33,4 +33,26 @@ async function fetchPage(url) {
   return { html, $, headers, finalUrl, responseTimeMs };
 }
 
-module.exports = { fetchPage };
+async function fetchPageWithJS(url, timeoutMs = 15000) {
+  const puppeteer = require('puppeteer');
+  const start = Date.now();
+  const browser = await puppeteer.launch({
+    headless: 'new',
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  });
+  try {
+    const page = await browser.newPage();
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+    const response = await page.goto(url, { waitUntil: 'networkidle2', timeout: timeoutMs });
+    const responseTimeMs = Date.now() - start;
+    const headers  = response ? response.headers() : {};
+    const finalUrl = page.url();
+    const html = await page.content();
+    const $ = cheerio.load(html);
+    return { html, $, headers, finalUrl, responseTimeMs };
+  } finally {
+    await browser.close();
+  }
+}
+
+module.exports = { fetchPage, fetchPageWithJS };

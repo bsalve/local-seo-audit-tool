@@ -6,6 +6,11 @@ export default defineNuxtConfig({
       google: {
         clientId: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        scope: ['email', 'profile', 'https://www.googleapis.com/auth/webmasters.readonly'],
+        authorizationParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
       },
     },
   },

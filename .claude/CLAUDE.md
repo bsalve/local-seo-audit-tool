@@ -174,7 +174,7 @@ output/                # Generated PDFs (gitignored)
 | `aeoDefinitionContent.js` | `<dl>/<dt>/<dd>` definition lists + `<dfn>` elements — scored 0/50/70/100 |
 | `aeoConciseAnswers.js` | Paragraphs in 20–80 word snippet-ready range — scored 0/40/70/100 |
 
-### GEO (13 checks) — name prefixed `[GEO]`
+### GEO (14 checks) — name prefixed `[GEO]`
 | File | What it checks |
 |---|---|
 | `geoEeat.js` | Author byline + date + about link + contact link (25 pts each) |
@@ -188,8 +188,9 @@ output/                # Generated PDFs (gitignored)
 | `geoReviewContent.js` | Visible testimonial signals: blockquote, review classes, star patterns, attributed quotes |
 | `geoServiceAreaContent.js` | areaServed in schema + geographic text mentions (state names, location phrases) |
 | `geoMultiModal.js` | Embedded video (YouTube/Vimeo/etc. or `<video>`) + `<audio>` element |
-| `geoLlmsTxt.js` | Fetches /llms.txt — file missing (0), sparse <100 chars (60), present (100) |
+| `geoLlmsTxt.js` | Fetches /llms.txt AND /llms-full.txt — both missing (0), sparse <100 chars (60), either present with content (100) |
 | `geoAICrawlerAccess.js` | Parses robots.txt for 7 AI bots (GPTBot, ClaudeBot, PerplexityBot, etc.) — 0 blocked (100), 1–2 (50), 3+ (0) |
+| `geoAIPresence.js` | Queries Perplexity API (sonar model) to check if site is cited in AI search results for a brand query — cited (100), mentioned in text (60), absent (0), API key missing (warn/50). Requires `PERPLEXITY_API_KEY`. Skipped in site crawl. |
 
 ## Audit Module Interface
 
@@ -343,6 +344,7 @@ Color tokens are hardcoded (no CSS variables):
 22. **Audit re-fetching causes OOM** — Audits must use the `$`/`html` passed in, never call `axios.get(url)` themselves. Each re-fetch creates a 50-100 MB cheerio DOM; across a 50-page crawl that's 4+ GB → OOM. `checkNAP.js` and `checkMetaTags.js` were previously broken this way.
 23. **`assets/main.css` `.pdf-link` is invisible by default** — Global `assets/main.css` defines `.pdf-link` with `opacity: 0` and `margin-bottom: 48px`. The `.in` class is required to make it visible (`opacity: 1`). Always add class `pdf-link in` when using this class in Vue pages. Also override `margin-bottom: 0` in the page's global style block to prevent vertical misalignment in table rows.
 24. **Vue scoped CSS doesn't apply to client-only rendered elements** — Elements rendered after `onMounted` (i.e., data fetched client-side via `$fetch`) won't receive scoped CSS styles. Move styles for dynamically rendered elements to the unscoped `<style>` block. This bit us on `dashboard.vue`'s PDF download button.
+25. **Never use `innerHTML` for interactive UI inside Vue pages** — Elements injected via `element.innerHTML = ...` don't get the `data-v-xxx` attribute, so scoped CSS never applies to them — they render as plain browser-default elements. Moving styles to an unscoped block is not a reliable workaround (specificity and load-order issues). The correct fix is always a Vue template with `v-if`/`v-else` and a reactive `ref()`. Also: never attach event listeners with both `@click` in the template AND `addEventListener` in `onMounted` to the same element — both fire on click, causing double execution.
 
 ## Auth & Dashboard
 
@@ -357,6 +359,7 @@ GOOGLE_CLIENT_SECRET=...             # Same
 GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google  # Must match Google Cloud Console
 RESEND_API_KEY=                              # From resend.com — enables welcome, regression, and scheduled report emails
 EMAIL_FROM=SignalGrade <noreply@yourdomain.com>  # Verified sender in Resend dashboard
+PERPLEXITY_API_KEY=                          # From perplexity.ai/settings/api — enables [GEO] AI Search Presence check
 ```
 
 **Auth routes:**
@@ -421,10 +424,11 @@ BFS crawler, same-origin only. `crawlSite(startUrl, { maxPages, onProgress })` r
 - `technicalRedirectChain.js` — up to 10 sequential GETs per page chasing redirects
 - `checkCrawlability.js` — fetches /robots.txt + /sitemap.xml (domain-level, same for every page)
 - `technicalRobotsSafety.js` — fetches /robots.txt (domain-level, same for every page)
-- `geoLlmsTxt.js` — fetches /llms.txt (domain-level, same for every page)
+- `geoLlmsTxt.js` — fetches /llms.txt + /llms-full.txt (domain-level, same for every page)
 - `geoAICrawlerAccess.js` — fetches /robots.txt (domain-level, same for every page)
 - `technicalSitemapValidation.js` — HEADs sitemap URLs (domain-level + too slow per-page)
 - `technicalCrawlDelay.js` — fetches /robots.txt (domain-level, same for every page)
+- `geoAIPresence.js` — Perplexity API call (domain-level, slow)
 
 **SSE event shapes streamed from `/crawl`:**
 - `{ type: 'progress', crawled: N, total: 50, url: '...' }` — fired before each page fetch
@@ -460,9 +464,20 @@ BFS crawler, same-origin only. `crawlSite(startUrl, { maxPages, onProgress })` r
   - `invoice.payment_failed` webhook — not handled; no retry email on failed renewal
   - **Scheduled audits** ✅ DONE — `scheduled_audits` DB table, CRUD API at `/api/scheduled`, Nitro scheduler plugin (10-min polling), `utils/runAudit.js` shared helper, dashboard UI with add/remove/toggle. Gated to pro/agency. Requires `RESEND_API_KEY` + `EMAIL_FROM` for email delivery.
 - **8 new Technical audit checks** ✅ DONE — Cache-Control, CSP, Resource Hints, Render-Blocking Resources, Asset Minification, Web App Manifest, Crawl Delay, X-Robots-Tag. Total: 73 → 81 checks.
+- **Account page enhancements (A1–A4)** ✅ DONE — Usage card (month-to-date + total reports), retention notice in Plan card, PDF Logo URL for agency users (stored in `users.pdf_logo_url`, migration 010, auto-applied to PDFs), Delete Account with "DELETE" confirmation (cascade delete + session clear).
+- **llms.txt extended to llms-full.txt (#22)** ✅ DONE — `geoLlmsTxt.js` now fetches both `/llms.txt` and `/llms-full.txt` in parallel. Pass if either has ≥100 chars; warn if llms.txt exists but sparse; fail if both missing.
+- **AI Search Presence check (#21)** ✅ DONE — `geoAIPresence.js` queries Perplexity API (sonar model) with a brand query and checks if site appears in citations or response text. Requires `PERPLEXITY_API_KEY`. Shows warn/skip if key not set. Skipped in site crawl. Total: 81 → 82 checks.
 - **Sitemap XML export** ✅ DONE — "Download Sitemap XML" button in site audit results; client-side Blob download from crawled URL set (`downloadSitemapXml()` in `app-main.js`).
 - **API access & API key management** ✅ DONE — `api_keys` DB table (migration 006), CRUD routes at `/api/keys`, `server/middleware/00.apiKeyAuth.ts` (Bearer token auth, sets `event.context.apiKeyUser`), API Access section on `/account` (pro/agency), `/docs` static API reference page.
 - **Embeddable widget** ✅ DONE — `pages/widget.vue` (API key gated iframe page), `server/routes/widget-audit.post.ts` (validates key + plan gate), `public/widget.js` (iframe loader via `document.currentScript`), embed code shown on `/account` for agency users.
+- **CSV/JSON export** ✅ DONE — Export JSON + Export CSV buttons on page audit and site audit results. Client-side Blob download. Page audit buttons animate in with PDF button (600ms). Compare audit has CSV export.
+- **Webhooks** ✅ DONE — `webhooks` DB table (migration 007), `utils/webhooks.js` (HMAC-SHA256 signed POSTs), CRUD at `/api/webhooks`, dispatched after page and site audits. Managed on `/account` (pro/agency).
+- **JS Rendering** ✅ DONE — Puppeteer-based fetch toggle in Customize panel (pro/agency). `fetchPageWithJS()` in `utils/fetcher.js`, `jsRender` body param on `/audit`. Toggle disabled/dimmed for free/anon users.
+- **Shareable report links** ✅ DONE — `share_token` column on `reports` (migration 008), `/api/reports/[id]/share` generates token, `/api/share/[token]` returns public report data, `/report/share/[token]` public Vue page. Share button on dashboard copies link to clipboard.
+- **Google Search Console integration** ✅ DONE — GSC OAuth scope + token storage (migration 009), `utils/gsc.js` (token refresh + GSC API), `/api/gsc-data` endpoint, Search Console Data panel injected after page audit results (logged-in users only).
+- **⚠ UNTESTED — JS Rendering (Feature 16)** — Requires a React/Vue/Angular SPA that returns empty HTML without JS. To test: switch to Pro via Dev Tools, expand Customize Report on the audit page, enable "JS Rendering", audit a known client-side SPA (e.g. a Vite/CRA app). Confirm results differ from a standard fetch of the same URL.
+- **⚠ UNTESTED — Google Search Console integration (Feature 17)** — Requires a domain verified in Google Search Console under the authenticated Google account. To test: sign in with a Google account that has GSC properties, run a page audit on one of those domains, confirm the "Search Console Data" panel appears below results with query/click/impression/position data. If the domain isn't in GSC the panel will say "not connected" — that's expected behavior, not a bug.
+- **⚠ REMOVE BEFORE LAUNCH — Dev plan switcher** — `server/api/dev/set-plan.post.ts` (404s in production) + "Dev Tools" card in `pages/account.vue` (`v-if="isDev"` / `import.meta.dev`) lets you switch between free/pro/agency tiers for testing. Delete the API file and the card + its CSS + `isDev`/`devPlanBusy`/`devSetPlan` in account.vue before going to production.
 
 ## Global Rules (from ~/.claude/CLAUDE.md)
 

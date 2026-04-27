@@ -16,11 +16,20 @@
       --warn: #ffb800; --fail: #ff4455; --pass: #34d399;
     }
     body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; line-height: 1.6; min-height: 100vh; }
-    nav { position: sticky; top: 0; background: var(--bg); border-bottom: 1px solid var(--border); z-index: 10; }
+    nav { position: sticky; top: 0; background: rgba(11,12,14,0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); z-index: 10; }
     .nav-inner { max-width: 1080px; margin: 0 auto; padding: 0 32px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
-    .nav-brand { font-family: 'Space Mono', monospace; font-size: 13px; font-weight: 400; letter-spacing: 0.12em; color: var(--text); text-decoration: none; }
-    .nav-link { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); text-decoration: none; letter-spacing: 0.05em; padding: 5px 10px; border-radius: 4px; }
-    .nav-link:hover { color: var(--text); background: rgba(228,230,234,0.06); }
+    .nav-brand { font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 400; letter-spacing: 0.15em; text-transform: uppercase; text-decoration: none; background: linear-gradient(90deg, var(--muted), var(--accent)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .nav-link { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); text-decoration: none; letter-spacing: 0.05em; padding: 5px 10px; border-radius: 4px; transition: background 0.15s, color 0.15s; }
+    .nav-link:hover { color: var(--text); background: rgba(228,230,234,0.06); text-decoration: none; }
+    .nav-link-current { color: var(--accent); background: rgba(77,159,255,0.08); pointer-events: none; }
+    .auth-avatar { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--border); }
+    .nav-divider { display: inline-block; width: 1px; height: 14px; background: var(--border); user-select: none; vertical-align: middle; }
+    .nav-signout { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); background: none; border: 1px solid var(--border); border-radius: 4px; padding: 4px 10px; text-decoration: none; letter-spacing: 0.05em; transition: color 0.15s, border-color 0.15s; }
+    .nav-signout:hover { color: var(--fail); border-color: var(--fail); text-decoration: none; }
+    .nav-signin { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); background: none; border: 1px solid var(--border); border-radius: 4px; padding: 5px 12px; text-decoration: none; letter-spacing: 0.05em; transition: color 0.15s, border-color 0.15s; }
+    .nav-signin:hover { color: var(--text); border-color: var(--dim2); box-shadow: 0 0 8px rgba(77,159,255,0.25); }
+    .nav-pricing { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); text-decoration: none; letter-spacing: 0.05em; padding: 5px 10px; border-radius: 4px; transition: background 0.15s, color 0.15s; }
+    .nav-pricing:hover { background: rgba(228,230,234,0.06); color: var(--text); }
     .page { max-width: 800px; margin: 0 auto; padding: 56px 32px 100px; }
     .page-title { font-size: 26px; font-weight: 600; margin-bottom: 8px; }
     .page-subtitle { font-size: 14px; color: var(--muted); margin-bottom: 48px; }
@@ -48,11 +57,7 @@
   <nav>
     <div class="nav-inner">
       <a href="/" class="nav-brand">SIGNALGRADE</a>
-      <div style="display:flex;gap:4px;align-items:center">
-        <a href="/" class="nav-link">Audit</a>
-        <a href="/dashboard" class="nav-link">Dashboard</a>
-        <a href="/account" class="nav-link">Account</a>
-      </div>
+      <div id="authWidget" style="display:flex;gap:16px;align-items:center"></div>
     </div>
   </nav>
 
@@ -153,5 +158,31 @@
       </tbody>
     </table>
   </div>
+  <script>
+    (async function () {
+      function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+      try {
+        const res  = await fetch('/api/me');
+        const data = res.ok ? await res.json() : null;
+        const user = data?.user;
+        const widget = document.getElementById('authWidget');
+        if (!widget) return;
+        if (user) {
+          widget.innerHTML =
+            (user.avatar_url ? '<img class="auth-avatar" src="' + esc(user.avatar_url) + '" referrerpolicy="no-referrer" alt="" />' : '') +
+            '<a href="/pricing" class="nav-link">Pricing</a>' +
+            '<a href="/docs" class="nav-link nav-link-current">API Docs</a>' +
+            '<a href="/dashboard" class="nav-link">Dashboard</a>' +
+            '<a href="/account" class="nav-link">Account</a>' +
+            '<span class="nav-divider"></span>' +
+            '<a href="/auth/logout" class="nav-signout">Sign out</a>';
+        } else {
+          widget.innerHTML =
+            '<a href="/pricing" class="nav-pricing">Pricing</a>' +
+            '<a href="/auth/google" class="nav-signin">Sign in</a>';
+        }
+      } catch (_) {}
+    })();
+  </script>
 </body>
 </html>

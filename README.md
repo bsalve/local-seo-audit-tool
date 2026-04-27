@@ -39,7 +39,7 @@ npm start
 Opens `http://localhost:3000`. Use the **Page Audit / Site Audit / Compare** toggle above the URL input.
 
 #### Page Audit (default)
-Runs all 81 checks against a single URL. When the audit finishes:
+Runs all 82 checks against a single URL. When the audit finishes:
 - A letter grade and animated score counter appear
 - Per-category scores (Technical / Content / AEO / GEO) appear as mini score cards
 - Results are grouped **Technical → Content → AEO → GEO** with color-coded headers
@@ -64,7 +64,7 @@ Site-only post-crawl checks (not run per-page):
 Runs page audits against up to 10 URLs in parallel and renders a side-by-side competitor comparison. Results include:
 - Per-location grade card with overall score, grade, and category scores (T / C / A / G)
 - **Common Issues** section ranked by how many locations they affect
-- **Check Comparison** table — all 81 checks × all locations, with ✓ / △ / ✕ icons and scores
+- **Check Comparison** table — all 82 checks × all locations, with ✓ / △ / ✕ icons and scores
 - CSV export of the full comparison table
 - Generates a PDF comparison report (`signalgrade-multi-report-*.pdf`)
 
@@ -99,11 +99,11 @@ node index.js https://example.com 2>/dev/null | jq '.grade'
 | 60–69  | D     | Poor — significant gaps in SEO foundations and AI-readiness signals |
 | 0–59   | F     | Critical — foundational elements and AI optimization signals are missing |
 
-Total score is the arithmetic mean of all 81 individual normalized scores (each scaled 0–100). Per-category scores (Technical / Content / AEO / GEO) are shown separately with individual letter grades.
+Total score is the arithmetic mean of all 82 individual normalized scores (each scaled 0–100). Per-category scores (Technical / Content / AEO / GEO) are shown separately with individual letter grades.
 
 ---
 
-## Audit Checks — 81 Total
+## Audit Checks — 82 Total
 
 All modules live in `/audits` and are auto-discovered — adding a new `.js` file is all that's needed.
 
@@ -192,7 +192,7 @@ Signals for featured snippets, People Also Ask, and voice assistant responses.
 | `aeoDefinitionContent.js` | `<dl>/<dt>/<dd>` definition lists and `<dfn>` elements | 0–100 |
 | `aeoConciseAnswers.js` | Paragraphs in the 20–80 word snippet-ready range | 0–100 |
 
-### GEO — Generative Engine Optimization (13 checks)
+### GEO — Generative Engine Optimization (14 checks)
 
 Signals for citation and representation in AI-generated answers.
 
@@ -209,8 +209,9 @@ Signals for citation and representation in AI-generated answers.
 | `geoReviewContent.js` | Testimonial signals: blockquotes, review classes, star patterns, attributed quotes | 0–100 |
 | `geoPrivacyTrust.js` | Privacy policy link, terms of service link, cookie/GDPR notice | 0–100 |
 | `geoMultiModal.js` | Embedded video (YouTube/Vimeo/etc. or `<video>`) and `<audio>` elements | 0–100 |
-| `geoLlmsTxt.js` | `/llms.txt` file presence and content quality | 0–100 |
+| `geoLlmsTxt.js` | `/llms.txt` AND `/llms-full.txt` — either present with ≥100 chars = pass; sparse = warn; both missing = fail | 0–100 |
 | `geoAICrawlerAccess.js` | GPTBot, ClaudeBot, PerplexityBot, Googlebot-Extended access in robots.txt | 0–100 |
+| `geoAIPresence.js` | Queries Perplexity AI (sonar) to check if site appears in AI search results for a brand query — cited in sources (100), mentioned in text (60), absent (0). Requires `PERPLEXITY_API_KEY`. Skipped in site crawl. | 0–100 |
 
 ---
 
@@ -234,6 +235,7 @@ module.exports = function myCheck($, html, url, meta) {
 ```
 
 3. Done — the CLI picks it up automatically. **Restart the web server** to load the new file (audits are discovered once at Nitro startup). Also add a corresponding entry to the `STEPS` array in `public/app-main.js` so the progress bar reflects the new check count.
+4. If the check should be skipped during site crawls (e.g. it makes slow external API calls or domain-level HTTP requests), add its filename to the `SKIP_AUDITS` set in `utils/pageWorker.js`.
 
 **Naming convention:** Prefix `name` with `[Technical]`, `[Content]`, `[AEO]`, or `[GEO]` to auto-group results in the UI and PDF. Unprefixed results appear in the Technical section.
 
@@ -263,10 +265,15 @@ SignalGrade supports optional Google OAuth sign-in backed by PostgreSQL. When en
 
 - A **Sign in** button appears in the navbar on the homepage
 - Every completed audit (page, site, or compare) is automatically saved to the database
-- Signed-in users can visit `/dashboard` to see their full report history with grade, score, date, and PDF download links
-- Reports can be deleted individually with an inline confirmation step
-- `/account` shows the current plan, usage limits, and a link to upgrade
+- Signed-in users can visit `/dashboard` to see their full report history with grade, score, date, PDF download, and share links
+- Reports can be soft-deleted individually with an inline confirmation step (deleted reports are hidden but preserved in the database for usage accounting)
+- **Shareable report links** — Pro/Agency users can generate a public share URL for any report from the dashboard
+- **Scheduled audits** — Pro/Agency users can schedule recurring audits (daily/weekly/monthly) from the dashboard; results are emailed via Resend. Requires `RESEND_API_KEY` and `EMAIL_FROM`.
+- `/account` shows the current plan, usage stats (audits this month, total reports saved), plan limits, billing management, and a link to upgrade
+- Agency users can save a **PDF logo URL** on `/account` — it auto-applies to all PDFs they generate
+- **Delete Account** — permanently deletes the account and all associated data with a typed confirmation
 - `/pricing` shows the three plan tiers with feature lists, upgrade CTAs, and FAQ — publicly accessible without sign-in
+- **Google Search Console integration** — after sign-in, page audit results for verified domains show a Search Console panel with top queries, clicks, impressions, and average position (last 28 days)
 
 **Setup:**
 
@@ -333,6 +340,11 @@ The widget renders an iframe at the script's location with a URL input and compa
 | `GOOGLE_CALLBACK_URL` | OAuth redirect URI — use `http://localhost:3000/auth/google` for local dev |
 | `STRIPE_SECRET_KEY` | Stripe secret key — required for paid plan upgrades |
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret — required for plan upgrade webhooks |
+| `STRIPE_PRO_PRICE_ID` | Stripe Price ID for the Pro plan |
+| `STRIPE_AGENCY_PRICE_ID` | Stripe Price ID for the Agency plan |
+| `RESEND_API_KEY` | Resend API key — required for scheduled audit result emails |
+| `EMAIL_FROM` | Verified sender address for Resend, e.g. `SignalGrade <noreply@yourdomain.com>` |
+| `PERPLEXITY_API_KEY` | Perplexity API key — required for the `[GEO] AI Search Presence` check |
 
 Set in a `.env` file at the project root.
 
@@ -345,7 +357,7 @@ signalgrade/
 ├── index.js                  # CLI entry point
 ├── nuxt.config.ts            # Nuxt 3 / Nitro configuration
 ├── knexfile.js               # Database configuration
-├── audits/                   # Auto-discovered audit modules (81 checks)
+├── audits/                   # Auto-discovered audit modules (82 checks)
 │   ├── check*.js             # Core checks (SSL, crawlability, meta tags, etc.)
 │   ├── technical*.js         # Technical checks
 │   ├── content*.js           # Content checks
@@ -354,8 +366,10 @@ signalgrade/
 ├── pages/
 │   ├── index.vue             # Homepage — Page / Site / Compare audit UI
 │   ├── dashboard.vue         # Report history (requires auth)
-│   ├── account.vue           # Account, plan, billing, and API keys (requires auth)
-│   └── widget.vue            # Embeddable audit widget (API key auth)
+│   ├── account.vue           # Account, plan, billing, API keys, webhooks (requires auth)
+│   ├── pricing.vue           # Pricing page — publicly accessible
+│   ├── widget.vue            # Embeddable audit widget (API key auth)
+│   └── report/share/[token].vue  # Public shareable report page
 ├── components/
 │   ├── AppNav.vue            # Shared sticky navbar
 │   └── AppFooter.vue         # Shared footer
@@ -382,16 +396,25 @@ signalgrade/
 │   │   ├── billing-portal.post.ts  # Stripe billing portal session
 │   │   └── webhooks/stripe.post.ts # Stripe webhook handler
 │   └── api/
-│       ├── me.get.ts         # { user, limits } from session
-│       ├── dashboard-data.get.ts   # Report history query
-│       ├── account-data.get.ts     # Billing/Stripe status
-│       ├── reports/[id].delete.ts  # Delete report (verifies ownership)
-│       └── keys/
-│           ├── index.get.ts        # List API keys for current user
-│           ├── index.post.ts       # Generate new API key (plaintext shown once)
-│           └── [id].delete.ts      # Revoke API key (verifies ownership)
+│       ├── me.get.ts                    # { user, limits } from session
+│       ├── dashboard-data.get.ts        # Report history query
+│       ├── account-data.get.ts          # Plan info, usage counts, PDF logo URL
+│       ├── gsc-data.get.ts              # Google Search Console data for a URL
+│       ├── reports/
+│       │   ├── [id].delete.ts           # Soft-delete report (verifies ownership)
+│       │   └── [id]/share.post.ts       # Generate public share token for a report
+│       ├── share/[token].get.ts         # Fetch public report data by share token
+│       ├── keys/
+│       │   ├── index.get.ts             # List API keys for current user
+│       │   ├── index.post.ts            # Generate new API key (plaintext shown once)
+│       │   └── [id].delete.ts           # Revoke API key (verifies ownership)
+│       ├── account/
+│       │   ├── index.delete.ts          # Delete account + all data (cascade)
+│       │   └── pdf-logo.patch.ts        # Save PDF logo URL for agency users
+│       ├── scheduled/                   # Scheduled audit CRUD (pro/agency)
+│       └── webhooks/                    # Webhook endpoint CRUD (pro/agency)
 ├── db/
-│   └── migrations/           # Knex migration files (users, reports, api_keys tables)
+│   └── migrations/           # Knex migration files (001–011: users, reports, sessions, api_keys, webhooks, share_tokens, google_tokens, pdf_logo, soft_delete)
 ├── public/
 │   ├── app-main.js           # Vanilla JS for the homepage audit UI
 │   ├── widget.js             # Embeddable iframe loader script
@@ -410,6 +433,8 @@ signalgrade/
 │   ├── generatePDF.js        # Puppeteer PDF renderer (page, site, compare)
 │   ├── score.js              # Shared scoring and grading logic
 │   ├── tiers.js              # Plan tier definitions and rate limit config
+│   ├── gsc.js                # Google Search Console API helper (token refresh + searchAnalytics)
+│   ├── webhooks.js           # HMAC-SHA256 signed webhook dispatcher
 │   └── db.js                 # Knex database instance (null if DATABASE_URL not set)
 └── output/                   # Generated PDFs (gitignored)
 ```

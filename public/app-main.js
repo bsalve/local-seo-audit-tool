@@ -105,6 +105,7 @@
     '[GEO] Checking multi-modal content',
     '[GEO] Checking llms.txt',
     '[GEO] Checking AI crawler access',
+    '[GEO] Checking AI search presence',
     'Calculating score',
     'Generating PDF report',
   ];
@@ -177,6 +178,48 @@
       .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
+  /* ── Blob download helper ── */
+  function downloadBlob(content, filename, type) {
+    const blob = new Blob([content], { type });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  /* ── Page audit export ── */
+  function exportPageJSON() {
+    if (!window._lastAuditData) return;
+    downloadBlob(JSON.stringify(window._lastAuditData, null, 2), 'signalgrade-report.json', 'application/json');
+  }
+
+  function exportPageCSV() {
+    if (!window._lastAuditData) return;
+    const rows = (window._lastAuditData.results || []).map(r =>
+      [r.name, r.status, r.normalizedScore !== null && r.normalizedScore !== undefined ? r.normalizedScore : '', r.message || '', r.recommendation || '']
+      .map(v => `"${String(v).replace(/"/g, '""')}"`)
+      .join(',')
+    );
+    downloadBlob(['name,status,score,message,recommendation', ...rows].join('\n'), 'signalgrade-report.csv', 'text/csv');
+  }
+
+  /* ── Site audit export ── */
+  function exportSiteJSON() {
+    if (!_latestSiteResults.length) return;
+    downloadBlob(JSON.stringify({ url: _latestSiteUrl, results: _latestSiteResults }, null, 2), 'signalgrade-site-report.json', 'application/json');
+  }
+
+  function exportSiteCSV() {
+    if (!_latestSiteResults.length) return;
+    const rows = _latestSiteResults.map(r =>
+      [r.name, r.fail.length > 0 ? 'fail' : r.warn.length > 0 ? 'warn' : 'pass',
+       r.fail.length, r.warn.length, r.pass.length, r.recommendation || '']
+      .map(v => `"${String(v).replace(/"/g, '""')}"`)
+      .join(',')
+    );
+    downloadBlob(['name,status,failCount,warnCount,passCount,recommendation', ...rows].join('\n'), 'signalgrade-site-report.csv', 'text/csv');
+  }
+
   /* ── Domain display helper ── */
   function toDomain(url) {
     try { return new URL(url).hostname.replace(/^www\./, ''); }
@@ -198,11 +241,12 @@
     startSteps();
 
     try {
-      const logoUrl = document.getElementById('logoUrlInput').value.trim();
+      const logoUrl  = document.getElementById('logoUrlInput').value.trim();
+      const jsRender = document.getElementById('jsRenderToggle')?.checked || false;
       const res  = await fetch('/audit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, ...(logoUrl && { logoUrl }) }),
+        body: JSON.stringify({ url, ...(logoUrl && { logoUrl }), ...(jsRender && { jsRender: true }) }),
       });
       const data = await res.json();
 
@@ -216,6 +260,7 @@
 
       if (!res.ok) { handleAuditError(res, data); return; }
       renderResults(data);
+      loadGscPanel(url);
       showSavedNote();
       results.style.display = 'block';
       requestAnimationFrame(() => {
@@ -275,6 +320,7 @@
 
   /* ── Render results ── */
   function renderResults(data) {
+    window._lastAuditData = data;
     // Sort: Technical → Content → AEO → GEO, stable within each group
     const results = [...data.results].sort((a, b) => categoryOrder(a.name) - categoryOrder(b.name));
 
@@ -340,11 +386,21 @@
         ${catScoreCell('GEO',       catScores.geo,       '#b07bff')}
       </div>
 
-      <!-- PDF download -->
-      <a class="pdf-link" id="pdfLink" href="/output/${esc(data.pdfFile)}" download>
-        <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-        Download PDF Report
-      </a>
+      <!-- PDF download + exports -->
+      <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-bottom:32px">
+        <a class="pdf-link" id="pdfLink" href="/output/${esc(data.pdfFile)}" download>
+          <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+          Download PDF Report
+        </a>
+        <button id="exportJsonBtn" class="pdf-link" style="background:none;cursor:pointer" onclick="exportPageJSON()">
+          <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+          Export JSON
+        </button>
+        <button id="exportCsvBtn" class="pdf-link" style="background:none;cursor:pointer" onclick="exportPageCSV()">
+          <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+          Export CSV
+        </button>
+      </div>
 
       ${(function() {
         const topFails = results
@@ -444,7 +500,11 @@
       }, 250);
       setTimeout(() => { document.getElementById('statsRow').classList.add('in'); }, 400);
       setTimeout(() => { document.getElementById('catScoresRow').classList.add('in'); }, 500);
-      setTimeout(() => { document.getElementById('pdfLink').classList.add('in'); }, 600);
+      setTimeout(() => {
+        document.getElementById('pdfLink').classList.add('in');
+        const ej = document.getElementById('exportJsonBtn'); if (ej) ej.classList.add('in');
+        const ec = document.getElementById('exportCsvBtn');  if (ec) ec.classList.add('in');
+      }, 600);
       setTimeout(() => { const el = document.getElementById('topIssues'); if (el) el.classList.add('in'); }, 630);
       setTimeout(() => { document.getElementById('cardsLabel').classList.add('in'); }, 650);
       setTimeout(() => { document.getElementById('cardStrip').classList.add('in'); }, 700);
@@ -954,6 +1014,14 @@
             <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
             Download Sitemap XML
           </button>
+          <button class="pdf-link in" style="background:none;cursor:pointer" onclick="exportSiteJSON()">
+            <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            Export JSON
+          </button>
+          <button class="pdf-link in" style="background:none;cursor:pointer" onclick="exportSiteCSV()">
+            <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            Export CSV
+          </button>
         </div>`;
 
     // Top Issues summary
@@ -1121,6 +1189,15 @@
         }
       }
 
+      // Enable JS Render toggle for pro/agency users
+      const jsToggle = document.getElementById('jsRenderToggle');
+      const jsLabel  = document.getElementById('jsRenderLabel');
+      if (jsToggle) {
+        const isPro = user && (user.plan === 'pro' || user.plan === 'agency');
+        jsToggle.disabled = !isPro;
+        if (jsLabel) jsLabel.style.opacity = isPro ? '1' : '0.45';
+      }
+
       const widget = document.getElementById('authWidget');
       if (!widget) return;
       if (user) {
@@ -1134,6 +1211,70 @@
       } else {
         widget.innerHTML = `<a href="/auth/google" class="google-btn">Sign in</a>`;
       }
+    } catch (_) {}
+  }
+
+  function buildGscPanelHtml(gsc) {
+    if (!gsc.connected) {
+      return `<div class="gsc-panel">
+        <div class="gsc-panel-title">Search Console Data</div>
+        <div class="gsc-panel-empty">
+          This site isn't connected to Google Search Console, or you haven't granted access yet.
+          <a class="gsc-connect-link" href="https://search.google.com/search-console" target="_blank" rel="noopener">Open Search Console →</a>
+        </div>
+      </div>`;
+    }
+
+    let siteLabel = gsc.site || '';
+    try {
+      if (!siteLabel.startsWith('sc-domain:')) siteLabel = new URL(gsc.site).hostname;
+    } catch (_) {}
+
+    if (!gsc.rows || !gsc.rows.length) {
+      return `<div class="gsc-panel">
+        <div class="gsc-panel-title">Search Console Data</div>
+        <div class="gsc-panel-period">Last 28 days · ${esc(siteLabel)}</div>
+        <div class="gsc-panel-empty">No query data found for this property in the last 28 days.</div>
+      </div>`;
+    }
+
+    const rows = gsc.rows.map(r => {
+      const query      = (r.keys && r.keys[0]) || '';
+      const clicks     = (r.clicks     ?? 0).toLocaleString();
+      const impressions= (r.impressions ?? 0).toLocaleString();
+      const position   = r.ctr !== undefined ? (r.position ?? 0).toFixed(1) : (r.position ?? 0).toFixed(1);
+      return `<tr>
+        <td>${esc(query)}</td>
+        <td class="gsc-td-num">${clicks}</td>
+        <td class="gsc-td-num">${impressions}</td>
+        <td class="gsc-td-num">${position}</td>
+      </tr>`;
+    }).join('');
+
+    return `<div class="gsc-panel">
+      <div class="gsc-panel-title">Search Console Data</div>
+      <div class="gsc-panel-period">Last 28 days · Top 10 queries · ${esc(siteLabel)}</div>
+      <table class="gsc-table">
+        <thead><tr>
+          <th>Query</th>
+          <th class="gsc-td-num">Clicks</th>
+          <th class="gsc-td-num">Impressions</th>
+          <th class="gsc-td-num">Position</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  }
+
+  async function loadGscPanel(url) {
+    if (!_currentUser) return;
+    const inner = document.getElementById('resultsInner');
+    if (!inner) return;
+    try {
+      const gsc = await fetch(`/api/gsc-data?url=${encodeURIComponent(url)}`).then(r => r.json());
+      const div = document.createElement('div');
+      div.innerHTML = buildGscPanelHtml(gsc);
+      inner.appendChild(div.firstElementChild);
     } catch (_) {}
   }
 

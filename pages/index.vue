@@ -33,6 +33,7 @@ onMounted(() => {
   <AppNav>
     <AppNavAuth>
       <a href="/pricing" class="nav-link">Pricing</a>
+      <a href="/docs" class="nav-link">API Docs</a>
       <a href="/dashboard" class="nav-link">Dashboard</a>
       <a href="/account" class="nav-link">Account</a>
     </AppNavAuth>
@@ -102,6 +103,14 @@ onMounted(() => {
               <input type="url" id="logoUrlInput" class="logo-input"
                      placeholder="https://youragency.com/logo.png"
                      autocomplete="off" spellcheck="false" />
+              <div style="margin-top:12px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);">
+                <label id="jsRenderLabel" style="display:flex;align-items:center;gap:8px;cursor:pointer;opacity:0.45">
+                  <input type="checkbox" id="jsRenderToggle" disabled />
+                  <span>JS Rendering — headless browser fetch (React/Vue/Angular SPAs)</span>
+                  <span class="tier-badge" style="margin-left:4px">PRO</span>
+                </label>
+                <span style="font-size:11px;color:var(--muted)">+5–15s</span>
+              </div>
             </div>
           </div>
 

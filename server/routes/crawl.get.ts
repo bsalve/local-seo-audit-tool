@@ -37,6 +37,7 @@ export default defineEventHandler(async (event) => {
   const { generatePDF }                 = _require(join(process.cwd(), 'utils/generatePDF.js'))
   const db                              = _require(join(process.cwd(), 'utils/db.js'))
   const r2                              = _require(join(process.cwd(), 'utils/r2.js'))
+  const { dispatchWebhooks }            = _require(join(process.cwd(), 'utils/webhooks.js'))
 
   const { url: rawUrl } = getQuery(event)
   if (!rawUrl || typeof rawUrl !== 'string') {
@@ -95,6 +96,8 @@ export default defineEventHandler(async (event) => {
         await db('reports').insert({ user_id: userId, url: rawUrl, audit_type: 'site', score: siteScore, grade: siteGrade, pdf_filename: pdfFile, r2_key: r2Key, results_json: JSON.stringify(transformed) })
           .catch((err: any) => console.error('Failed to save report:', err.message))
       }
+
+      if (userId) dispatchWebhooks(userId, 'site.complete', { url: rawUrl, pageCount: pages.length, score: siteScore, grade: siteGrade, pdfFile }).catch(() => {})
 
       send({ type: 'done', pageCount: pages.length, results: aggregated, pdfFile })
     } catch (err: any) {
